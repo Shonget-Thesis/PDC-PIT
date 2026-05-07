@@ -5,13 +5,16 @@ import json
 import uuid
 import asyncio
 from datetime import datetime
+import os
 
 app = FastAPI(title="Spark - Anonymous Voice Chat Backend")
 
-# CORS configuration for Next.js frontend
+# CORS configuration - allow frontend origins
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

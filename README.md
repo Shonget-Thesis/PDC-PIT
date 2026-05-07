@@ -1,4 +1,4 @@
-# Call Me - Anonymous Voice Chat Platform
+# Spark- Voice Chat
 
 A web-based anonymous voice chat platform that connects random strangers in real-time voice conversations. Built with Next.js, TypeScript, FastAPI, and WebRTC.
 

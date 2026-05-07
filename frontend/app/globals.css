@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+:root {
+  /* Dark green/olive theme inspired by the probiotic image */
+  --background: #3a4a3a;
+  --background-dark: #2d3a2d;
+  --foreground: #f0f0f0;
+  --accent: #4a5d4a;
+  --accent-hover: #5a6d5a;
+  --success: #6b8e6b;
+  --danger: #8b4949;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: linear-gradient(135deg, var(--background-dark) 0%, var(--background) 100%);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+* {
+  box-sizing: border-box;
+}

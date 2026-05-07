@@ -4,8 +4,8 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Phone, PhoneOff, Mic, MicOff, SkipForward, Loader2, Send, User, Globe, X } from 'lucide-react';
 
-// WebSocket server URL
-const WS_URL = 'ws://localhost:8000/ws';
+// WebSocket server URL - use environment variable or fallback to localhost
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
 
 // ICE servers for WebRTC
 const ICE_SERVERS = {

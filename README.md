@@ -117,6 +117,8 @@ The frontend will run on `http://localhost:3000`
 4. Both users will be matched and connected automatically
 5. Start talking!
 
+For load and failure scenarios, see `STRESS_TEST.md`.
+
 ## Usage
 
 ### Starting a Call

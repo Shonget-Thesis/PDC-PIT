@@ -32,6 +32,8 @@ npm run dev
 4. **Grant permissions**: Allow microphone access when prompted
 5. **Talk!**: Both users will be automatically matched and connected
 
+For stress and failure testing, see `STRESS_TEST.md`.
+
 ## What You Should See
 
 ### Backend Console (Port 8000):

@@ -44,6 +44,15 @@ class SkipMetrics:
     response_ms: float
 
 
+@dataclass
+class RunResult:
+    client_count: int
+    success: bool
+    match_metrics: MatchMetrics | None = None
+    skip_metrics: SkipMetrics | None = None
+    error: str | None = None
+
+
 async def wait_for_message(websocket: Any, message_type: str, timeout: float = 10.0) -> dict:
     deadline = time.perf_counter() + timeout
 
@@ -162,46 +171,89 @@ async def measure_skip_metrics(backend_url: str) -> SkipMetrics:
         await asyncio.gather(*[websocket.close() for websocket in clients], return_exceptions=True)
 
 
-def format_report(match_metrics: MatchMetrics, skip_metrics: SkipMetrics, backend_url: str, client_count: int) -> dict:
+def format_report(backend_url: str, requested_client_counts: list[int], runs: list[RunResult]) -> dict:
+    successful_runs = [run for run in runs if run.success]
+    failed_runs = [run for run in runs if not run.success]
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "backend_url": backend_url,
-        "client_count": client_count,
-        "match_metrics": asdict(match_metrics),
-        "skip_metrics": asdict(skip_metrics),
+        "requested_client_counts": requested_client_counts,
+        "summary": {
+            "total_runs": len(runs),
+            "successful_runs": len(successful_runs),
+            "failed_runs": len(failed_runs),
+            "fail_rate_percent": (len(failed_runs) / len(runs) * 100) if runs else 0.0,
+        },
+        "runs": [
+            {
+                "client_count": run.client_count,
+                "success": run.success,
+                "error": run.error,
+                "match_metrics": asdict(run.match_metrics) if run.match_metrics else None,
+                "skip_metrics": asdict(run.skip_metrics) if run.skip_metrics else None,
+            }
+            for run in runs
+        ],
     }
 
 
 def print_report(report: dict) -> None:
-    match_metrics = report["match_metrics"]
-    skip_metrics = report["skip_metrics"]
-
     print("Stress test results")
     print(f"Generated at: {report['generated_at']}")
     print(f"Backend URL: {report['backend_url']}")
-    print(f"Clients: {report['client_count']}")
+    print(f"Requested client counts: {', '.join(str(count) for count in report['requested_client_counts'])}")
+    print(
+        "Summary: "
+        f"{report['summary']['successful_runs']} success / "
+        f"{report['summary']['failed_runs']} failed "
+        f"({report['summary']['fail_rate_percent']:.1f}% fail rate)"
+    )
     print()
-    print("Match metrics")
-    print(f"  Average response time: {match_metrics['average_response_ms']:.2f} ms")
-    print(f"  Median response time:  {match_metrics['median_response_ms']:.2f} ms")
-    print(f"  p95 response time:     {match_metrics['p95_response_ms']:.2f} ms")
-    print(f"  Min / Max:             {match_metrics['min_response_ms']:.2f} / {match_metrics['max_response_ms']:.2f} ms")
-    print(f"  Throughput:            {match_metrics['matches_per_minute']:.2f} matches/min")
-    print()
-    print("Skip metrics")
-    print(f"  Partner disconnect latency: {skip_metrics['response_ms']:.2f} ms")
+    for run in report["runs"]:
+        print(f"Run: {run['client_count']} clients")
+        if not run["success"]:
+            print(f"  Failed: {run['error']}")
+            print()
+            continue
+
+        match_metrics = run["match_metrics"]
+        skip_metrics = run["skip_metrics"]
+        print("  Match metrics")
+        print(f"    Average response time: {match_metrics['average_response_ms']:.2f} ms")
+        print(f"    Median response time:  {match_metrics['median_response_ms']:.2f} ms")
+        print(f"    p95 response time:     {match_metrics['p95_response_ms']:.2f} ms")
+        print(f"    Min / Max:             {match_metrics['min_response_ms']:.2f} / {match_metrics['max_response_ms']:.2f} ms")
+        print(f"    Throughput:            {match_metrics['matches_per_minute']:.2f} matches/min")
+        print("  Skip metrics")
+        print(f"    Partner disconnect latency: {skip_metrics['response_ms']:.2f} ms")
+        print()
+
+
+async def run_single_benchmark(backend_url: str, client_count: int) -> RunResult:
+    try:
+        match_metrics = await measure_match_metrics(backend_url, client_count)
+        skip_metrics = await measure_skip_metrics(backend_url)
+        return RunResult(client_count=client_count, success=True, match_metrics=match_metrics, skip_metrics=skip_metrics)
+    except Exception as exc:
+        return RunResult(client_count=client_count, success=False, error=str(exc))
 
 
 async def main() -> int:
     parser = argparse.ArgumentParser(description="Run a small WebSocket stress benchmark.")
     parser.add_argument("--backend-url", default=DEFAULT_BACKEND_URL, help="Backend WebSocket base URL")
-    parser.add_argument("--clients", type=int, default=10, help="Number of clients to use for the match benchmark")
+    parser.add_argument(
+        "--clients",
+        type=int,
+        nargs="+",
+        default=[10],
+        help="One or more client counts to test, e.g. --clients 10 30 60",
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT_FILE, help="Where to save the JSON results")
     args = parser.parse_args()
 
-    match_metrics = await measure_match_metrics(args.backend_url, args.clients)
-    skip_metrics = await measure_skip_metrics(args.backend_url)
-    report = format_report(match_metrics, skip_metrics, args.backend_url, args.clients)
+    runs = [await run_single_benchmark(args.backend_url, client_count) for client_count in args.clients]
+    report = format_report(args.backend_url, args.clients, runs)
 
     args.output.write_text(json.dumps(report, indent=2), encoding="utf-8")
     print_report(report)

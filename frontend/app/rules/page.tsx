@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Rules() {
   return (
@@ -6,7 +7,7 @@ export default function Rules() {
       {/* Header */}
       <header className="w-full flex justify-between items-center">
         <Link href="/" className="flex items-center gap-1 px-3 py-4 mb-2 mt-1 hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="Logo" className="w-10 h-10" />
+          <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-10 h-10" />
           <h1 className="text-4xl font-bold tracking-wide text-white">Spark</h1>
         </Link>
         <nav className="flex gap-8 text-sm mr-8">
@@ -36,8 +37,8 @@ export default function Rules() {
             <h3 className="text-2xl font-medium text-white mt-8">Prohibited Content</h3>
             <ul className="list-disc list-inside space-y-3 text-lg pl-4">
               <li><strong className="text-white">No illegal activities</strong> - Discussion or promotion of illegal activities is not allowed.</li>
-              <li><strong className="text-white">No spam or advertising</strong> - Don't use Spark to promote products, services, or other platforms.</li>
-              <li><strong className="text-white">No impersonation</strong> - Be yourself. Don't pretend to be someone else.</li>
+              <li><strong className="text-white">No spam or advertising</strong> - Don&apos;t use Spark to promote products, services, or other platforms.</li>
+              <li><strong className="text-white">No impersonation</strong> - Be yourself. Don&apos;t pretend to be someone else.</li>
               <li><strong className="text-white">No harmful content</strong> - This includes graphic violence, self-harm content, or anything that could cause distress.</li>
             </ul>
             
@@ -48,7 +49,7 @@ export default function Rules() {
             
             <h3 className="text-2xl font-medium text-white mt-8">Reporting & Moderation</h3>
             <ul className="list-disc list-inside space-y-3 text-lg pl-4">
-              <li><strong className="text-white">Report abuse</strong> - If you encounter someone violating these rules, use the "Skip" button to move to the next person and report if needed.</li>
+              <li><strong className="text-white">Report abuse</strong> - If you encounter someone violating these rules, use the &quot;Skip&quot; button to move to the next person and report if needed.</li>
               <li><strong className="text-white">Zero tolerance policy</strong> - Violations of these rules may result in immediate and permanent bans.</li>
               <li><strong className="text-white">Your safety matters</strong> - If you feel unsafe or uncomfortable, end the call immediately.</li>
             </ul>
@@ -58,12 +59,12 @@ export default function Rules() {
               <li><strong className="text-white">Be genuine</strong> - Have authentic conversations and make real connections.</li>
               <li><strong className="text-white">Use interests wisely</strong> - Add relevant interest tags to find like-minded people.</li>
               <li><strong className="text-white">Give people a chance</strong> - Not every conversation will be perfect, but approach each one with an open mind.</li>
-              <li><strong className="text-white">End respectfully</strong> - If you want to end a conversation, do so politely before clicking "Skip".</li>
+              <li><strong className="text-white">End respectfully</strong> - If you want to end a conversation, do so politely before clicking &quot;Skip&quot;.</li>
             </ul>
 
             <div className="mt-8 p-6 bg-[#6b8e6b]/20 border border-[#6b8e6b] rounded-lg">
               <p className="text-white text-lg">
-                <strong>Remember:</strong> Every person you meet on Spark is a real human being. Treat them with the same respect and kindness you'd want for yourself.
+                <strong>Remember:</strong> Every person you meet on Spark is a real human being. Treat them with the same respect and kindness you&apos;d want for yourself.
               </p>
             </div>
           </div>

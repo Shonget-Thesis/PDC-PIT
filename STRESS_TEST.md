@@ -55,3 +55,9 @@ Use this checklist to stress the app after changes to matching, WebSockets, or t
 
 - Record any race conditions or repeated WebSocket messages here.
 - Add screenshots or console logs next to failing scenarios when you find them.
+
+## Automatic Results
+
+- Run `python stress_test_metrics.py --clients 10` from `Backend/` while the backend is running.
+- The script prints response time and throughput to the terminal.
+- It also saves a JSON report to `Backend/stress_test_results.json`.

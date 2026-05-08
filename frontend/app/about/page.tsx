@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function About() {
   return (
@@ -6,7 +7,7 @@ export default function About() {
       {/* Header */}
       <header className="w-full flex justify-between items-center">
         <Link href="/" className="flex items-center gap-1 px-3 py-4 mb-2 mt-1 hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="Logo" className="w-10 h-10" />
+          <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-10 h-10" />
           <h1 className="text-4xl font-bold tracking-wide text-white">Spark</h1>
         </Link>
         <nav className="flex gap-8 text-sm mr-8">
@@ -30,18 +31,18 @@ export default function About() {
             <ul className="list-disc list-inside space-y-3 text-lg">
               <li>Anonymous voice calls with random strangers</li>
               <li>Real-time text chat alongside voice communication</li>
-              <li>Skip to next person if the conversation isn't right for you</li>
+              <li>Skip to next person if the conversation isn&apos;t right for you</li>
               <li>Secure peer-to-peer WebRTC connections</li>
               <li>No registration or personal data required</li>
             </ul>
             
             <h3 className="text-2xl font-medium text-white mt-8">How It Works</h3>
             <ol className="list-decimal list-inside space-y-3 text-lg">
-              <li>Click "Start Call" to begin</li>
+              <li>Click &quot;Start Call&quot; to begin</li>
               <li>Grant microphone access when prompted</li>
               <li>Wait briefly while we find you a partner</li>
               <li>Enjoy your conversation with voice and text chat</li>
-              <li>Click "Skip" to move to the next person, or "End Call" when done</li>
+              <li>Click &quot;Skip&quot; to move to the next person, or &quot;End Call&quot; when done</li>
             </ol>
             
             <h3 className="text-2xl font-medium text-white mt-8">Our Mission</h3>

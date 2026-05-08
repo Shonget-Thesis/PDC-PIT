@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 export default function Privacy() {
   return (
@@ -6,7 +7,7 @@ export default function Privacy() {
       {/* Header */}
       <header className="w-full flex justify-between items-center">
         <Link href="/" className="flex items-center gap-1 px-3 py-4 mb-2 mt-1 hover:opacity-80 transition-opacity">
-          <img src="/logo.png" alt="Logo" className="w-10 h-10" />
+          <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-10 h-10" />
           <h1 className="text-4xl font-bold tracking-wide text-white">Spark</h1>
         </Link>
         <nav className="flex gap-8 text-sm mr-8">
@@ -65,7 +66,7 @@ export default function Privacy() {
               While we prioritize user privacy, we take safety seriously. If you encounter inappropriate behavior:
             </p>
             <ul className="list-disc list-inside space-y-3 text-lg">
-              <li>Immediately use the "Skip" button to end the conversation</li>
+              <li>Immediately use the &quot;Skip&quot; button to end the conversation</li>
               <li>Report serious violations through our contact channels</li>
               <li>Never share personal information with strangers</li>
             </ul>
@@ -83,7 +84,7 @@ export default function Privacy() {
               when you close the tab.
             </p>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Children's Privacy</h3>
+            <h3 className="text-2xl font-medium text-white mt-8">Children&apos;s Privacy</h3>
             <p className="text-lg">
               Spark is not intended for use by children under the age of 13. We do not knowingly collect 
               personal information from children. If you are a parent or guardian and believe your child has 
@@ -98,7 +99,7 @@ export default function Privacy() {
 
             <h3 className="text-2xl font-medium text-white mt-8">Contact</h3>
             <p className="text-lg">
-              Questions about privacy? We're here to help. Contact us through our official channels.
+              Questions about privacy? We&apos;re here to help. Contact us through our official channels.
             </p>
           </div>
         </div>

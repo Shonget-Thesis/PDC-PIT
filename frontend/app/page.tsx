@@ -51,8 +51,109 @@ export default function Home() {
   const localAnalyserRef = useRef<AnalyserNode | null>(null);
   const remoteAnalyserRef = useRef<AnalyserNode | null>(null);
 
+  // Handle match found
+  const handleMatchFound = async () => {
+    try {
+      setConnectionState('connecting');
+
+      // Get microphone access
+      await getUserMedia();
+
+      // Create peer connection
+      const pc = createPeerConnection();
+
+      // If initiator, create and send offer
+      if (isInitiatorRef.current) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        wsRef.current?.send(
+          JSON.stringify({
+            type: 'offer',
+            data: offer,
+          })
+        );
+      }
+    } catch (err) {
+      console.error('Error in handleMatchFound:', err);
+      setError('Failed to establish connection');
+      setConnectionState('disconnected');
+    }
+  };
+
+  // Handle offer from partner
+  const handleOffer = async (offer: RTCSessionDescriptionInit) => {
+    try {
+      await getUserMedia();
+      const pc = createPeerConnection();
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      wsRef.current?.send(
+        JSON.stringify({
+          type: 'answer',
+          data: answer,
+        })
+      );
+    } catch (err) {
+      console.error('Error handling offer:', err);
+    }
+  };
+
+  // Handle answer from partner
+  const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
+    try {
+      await peerConnectionRef.current?.setRemoteDescription(
+        new RTCSessionDescription(answer)
+      );
+    } catch (err) {
+      console.error('Error handling answer:', err);
+    }
+  };
+
+  // Handle ICE candidate
+  const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
+    try {
+      await peerConnectionRef.current?.addIceCandidate(
+        new RTCIceCandidate(candidate)
+      );
+    } catch (err) {
+      console.error('Error handling ICE candidate:', err);
+    }
+  };
+
+  // Handle partner disconnected
+  const handlePartnerDisconnected = () => {
+    peerConnectionRef.current?.close();
+    peerConnectionRef.current = null;
+    setConnectionState('disconnected');
+    setError('Partner disconnected');
+    setIsLocalTalking(false);
+    setIsRemoteTalking(false);
+
+    // Cleanup audio contexts
+    if (remoteAudioContextRef.current) {
+      remoteAudioContextRef.current.close();
+      remoteAudioContextRef.current = null;
+    }
+    remoteAnalyserRef.current = null;
+  };
+
+  // Handle incoming chat message
+  const handleChatMessage = (text: string) => {
+    const newMessage: ChatMessage = {
+      id: Date.now().toString(),
+      text,
+      isMine: false,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
   // Initialize WebSocket connection
-  const initializeWebSocket = useCallback(() => {
+  const initializeWebSocket = useCallback(function initializeWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
     const ws = new WebSocket(`${WS_URL}/${userId}`);
@@ -128,7 +229,7 @@ export default function Home() {
   }, [userId, connectionState]);
 
   // Get user media (microphone)
-  const getUserMedia = async () => {
+  async function getUserMedia() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -145,7 +246,7 @@ export default function Home() {
       setError('Microphone access denied. Please allow microphone access.');
       throw err;
     }
-  };
+  }
 
   // Setup audio detection for local stream
   const setupLocalAudioDetection = (stream: MediaStream) => {
@@ -242,7 +343,7 @@ export default function Home() {
   };
 
   // Create peer connection
-  const createPeerConnection = () => {
+  function createPeerConnection() {
     const pc = new RTCPeerConnection(ICE_SERVERS);
     peerConnectionRef.current = pc;
 
@@ -285,108 +386,7 @@ export default function Home() {
     };
 
     return pc;
-  };
-
-  // Handle match found
-  const handleMatchFound = async () => {
-    try {
-      setConnectionState('connecting');
-      
-      // Get microphone access
-      await getUserMedia();
-      
-      // Create peer connection
-      const pc = createPeerConnection();
-
-      // If initiator, create and send offer
-      if (isInitiatorRef.current) {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        
-        wsRef.current?.send(
-          JSON.stringify({
-            type: 'offer',
-            data: offer,
-          })
-        );
-      }
-    } catch (err) {
-      console.error('Error in handleMatchFound:', err);
-      setError('Failed to establish connection');
-      setConnectionState('disconnected');
-    }
-  };
-
-  // Handle offer from partner
-  const handleOffer = async (offer: RTCSessionDescriptionInit) => {
-    try {
-      await getUserMedia();
-      const pc = createPeerConnection();
-      
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      wsRef.current?.send(
-        JSON.stringify({
-          type: 'answer',
-          data: answer,
-        })
-      );
-    } catch (err) {
-      console.error('Error handling offer:', err);
-    }
-  };
-
-  // Handle answer from partner
-  const handleAnswer = async (answer: RTCSessionDescriptionInit) => {
-    try {
-      await peerConnectionRef.current?.setRemoteDescription(
-        new RTCSessionDescription(answer)
-      );
-    } catch (err) {
-      console.error('Error handling answer:', err);
-    }
-  };
-
-  // Handle ICE candidate
-  const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
-    try {
-      await peerConnectionRef.current?.addIceCandidate(
-        new RTCIceCandidate(candidate)
-      );
-    } catch (err) {
-      console.error('Error handling ICE candidate:', err);
-    }
-  };
-
-  // Handle partner disconnected
-  const handlePartnerDisconnected = () => {
-    peerConnectionRef.current?.close();
-    peerConnectionRef.current = null;
-    setConnectionState('disconnected');
-    setError('Partner disconnected');
-    setIsLocalTalking(false);
-    setIsRemoteTalking(false);
-    
-    // Cleanup audio contexts
-    if (remoteAudioContextRef.current) {
-      remoteAudioContextRef.current.close();
-      remoteAudioContextRef.current = null;
-    }
-    remoteAnalyserRef.current = null;
-  };
-
-  // Handle incoming chat message
-  const handleChatMessage = (text: string) => {
-    const newMessage: ChatMessage = {
-      id: Date.now().toString(),
-      text,
-      isMine: false,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, newMessage]);
-  };
+  }
 
   // Send chat message
   const sendMessage = () => {

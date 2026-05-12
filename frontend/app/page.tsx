@@ -5,7 +5,15 @@ import Link from 'next/link';
 import { Phone, PhoneOff, Mic, MicOff, SkipForward, Loader2, Send, User, Globe, X } from 'lucide-react';
 
 // WebSocket server URL - use environment variable or fallback to localhost
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws';
+const WS_BASE_URL = (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/ws').trim().replace(/\/+$/, '');
+
+function getWebSocketUrl(userId: string) {
+  if (WS_BASE_URL.endsWith('/ws')) {
+    return `${WS_BASE_URL}/${userId}`;
+  }
+
+  return `${WS_BASE_URL}/ws/${userId}`;
+}
 
 // ICE servers for WebRTC
 const ICE_SERVERS = {
@@ -156,7 +164,7 @@ export default function Home() {
   const initializeWebSocket = useCallback(function initializeWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(`${WS_URL}/${userId}`);
+    const ws = new WebSocket(getWebSocketUrl(userId));
     wsRef.current = ws;
 
     ws.onopen = () => {

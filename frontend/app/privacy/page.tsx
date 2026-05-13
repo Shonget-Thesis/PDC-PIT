@@ -3,113 +3,171 @@ import Image from 'next/image';
 
 export default function Privacy() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#0f0a07] via-[#1a1410] to-[#2d1f15]">
       {/* Header */}
-      <header className="w-full flex justify-between items-center">
-        <Link href="/" className="flex items-center gap-1 px-3 py-4 mb-2 mt-1 hover:opacity-80 transition-opacity">
-          <Image src="/logo.png" alt="Logo" width={40} height={40} className="w-10 h-10" />
-          <h1 className="text-4xl font-bold tracking-wide text-white">Spark</h1>
+      <header className="w-full flex justify-between items-center px-8 py-6 border-b border-[#ff6b35]/20">
+        <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
+          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[#ff6b35] to-[#ff8a5a] flex items-center justify-center font-bold text-white">SY</div>
+          <h1 className="text-3xl font-bold tracking-tight text-white group-hover:text-[#ff6b35] transition-colors" style={{ fontFamily: "'Google Sans', sans-serif" }}>SYNCED</h1>
         </Link>
-        <nav className="flex gap-8 text-sm mr-8">
-          <Link href="/about" className="text-white/80 hover:text-white transition-colors">About</Link>
-          <Link href="/rules" className="text-white/80 hover:text-white transition-colors">Rules</Link>
-          <Link href="/privacy" className="text-white/80 hover:text-white transition-colors">Privacy</Link>
+        <nav className="flex gap-8 text-sm">
+          <Link href="/about" className="text-white/70 hover:text-white transition-colors">About</Link>
+          <Link href="/rules" className="text-white/70 hover:text-white transition-colors">Rules</Link>
+          <Link href="/privacy" className="text-[#ff6b35] font-medium transition-colors">Privacy</Link>
         </nav>
       </header>
 
       {/* Content */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-8 py-8">
-        <div className="bg-[#2d3a2d]/50 backdrop-blur-sm border border-[#4a5d4a] rounded-2xl p-8 md:p-12">
-          <h2 className="text-4xl font-light text-white mb-8">Privacy Policy</h2>
-          <div className="space-y-6 text-white/80">
-            <p className="text-sm text-white/60">Last updated: {new Date().toLocaleDateString()}</p>
-            
-            <h3 className="text-2xl font-medium text-white mt-8">Our Commitment to Privacy</h3>
-            <p className="text-lg">
-              Spark is built with privacy at its core. We collect minimal data and do not store personal information.
-            </p>
+      <main className="flex-1 max-w-4xl w-full mx-auto px-8 py-12">
+        <div className="bg-[#1a1410]/60 backdrop-blur-md border border-[#ff6b35]/30 rounded-2xl p-8 md:p-12 hover:border-[#ff6b35]/60 transition-colors">
+          <h2 className="text-5xl font-bold text-white mb-2" style={{ fontFamily: "'Google Sans', sans-serif" }}>Privacy Policy</h2>
+          <p className="text-sm text-white/50 mb-8">Last updated: {new Date().toLocaleDateString()}</p>
+          
+          <div className="space-y-8 text-white/90">
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Our Commitment to Privacy</h3>
+              <p className="text-lg leading-relaxed">
+                SYNCED is built with privacy at its core. We collect minimal data and do not store personal information.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Data We Collect</h3>
-            <ul className="list-disc list-inside space-y-3 text-lg">
-              <li><strong>Temporary Session IDs:</strong> Generated locally in your browser for matching purposes only</li>
-              <li><strong>Connection Data:</strong> Necessary technical data for establishing peer-to-peer connections</li>
-              <li><strong>No Audio Recording:</strong> Voice calls are direct peer-to-peer and not recorded or stored</li>
-              <li><strong>No Chat Logs:</strong> Text messages are transmitted in real-time and not saved</li>
-            </ul>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Data We Collect</h3>
+              <ul className="space-y-3 text-lg">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span><strong>Temporary Session IDs:</strong> Generated locally in your browser for matching purposes only</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span><strong>Connection Data:</strong> Necessary technical data for establishing peer-to-peer connections</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span><strong>No Audio Recording:</strong> Voice calls are direct peer-to-peer and not recorded or stored</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span><strong>No Chat Logs:</strong> Text messages are transmitted in real-time and not saved</span>
+                </li>
+              </ul>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">How We Use Your Data</h3>
-            <p className="text-lg">
-              The minimal data we process is used solely to:
-            </p>
-            <ul className="list-disc list-inside space-y-3 text-lg">
-              <li>Match you with other users</li>
-              <li>Establish secure peer-to-peer connections</li>
-              <li>Maintain service quality and performance</li>
-            </ul>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>How We Use Your Data</h3>
+              <p className="text-lg mb-4">The minimal data we process is used solely to:</p>
+              <ul className="space-y-3 text-lg">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Match you with other users</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Establish secure peer-to-peer connections</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Maintain service quality and performance</span>
+                </li>
+              </ul>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Data Retention</h3>
-            <p className="text-lg">
-              All session data is temporary and automatically deleted when you disconnect. We do not maintain 
-              logs of conversations, user profiles, or browsing history.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Data Retention</h3>
+              <p className="text-lg leading-relaxed">
+                All session data is temporary and automatically deleted when you disconnect. We do not maintain 
+                logs of conversations, user profiles, or browsing history.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Your Rights</h3>
-            <ul className="list-disc list-inside space-y-3 text-lg">
-              <li>Complete anonymity - no account required</li>
-              <li>Right to disconnect at any time</li>
-              <li>No tracking across sessions</li>
-              <li>Direct peer-to-peer communication</li>
-            </ul>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Your Rights</h3>
+              <ul className="space-y-3 text-lg">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Complete anonymity - no account required</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Right to disconnect at any time</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>No tracking across sessions</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Direct peer-to-peer communication</span>
+                </li>
+              </ul>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Safety & Reporting</h3>
-            <p className="text-lg">
-              While we prioritize user privacy, we take safety seriously. If you encounter inappropriate behavior:
-            </p>
-            <ul className="list-disc list-inside space-y-3 text-lg">
-              <li>Immediately use the &quot;Skip&quot; button to end the conversation</li>
-              <li>Report serious violations through our contact channels</li>
-              <li>Never share personal information with strangers</li>
-            </ul>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Safety & Reporting</h3>
+              <p className="text-lg mb-4">While we prioritize user privacy, we take safety seriously. If you encounter inappropriate behavior:</p>
+              <ul className="space-y-3 text-lg">
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Immediately use the &quot;Skip&quot; button to end the conversation</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Report serious violations through our contact channels</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-[#ff6b35] font-bold mt-1">•</span>
+                  <span>Never share personal information with strangers</span>
+                </li>
+              </ul>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Third-Party Services</h3>
-            <p className="text-lg">
-              We use STUN servers (provided by Google) for WebRTC connection establishment. These are industry-standard 
-              services that help establish peer-to-peer connections without exposing your actual IP address to other users.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Third-Party Services</h3>
+              <p className="text-lg leading-relaxed">
+                We use STUN servers (provided by Google) for WebRTC connection establishment. These are industry-standard 
+                services that help establish peer-to-peer connections without exposing your actual IP address to other users.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Cookies and Tracking</h3>
-            <p className="text-lg">
-              Spark does not use cookies for tracking or analytics. The only data stored in your browser is 
-              temporary session information needed for the current connection, which is automatically cleared 
-              when you close the tab.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Cookies and Tracking</h3>
+              <p className="text-lg leading-relaxed">
+                SYNCED does not use cookies for tracking or analytics. The only data stored in your browser is 
+                when you close the tab.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Children&apos;s Privacy</h3>
-            <p className="text-lg">
-              Spark is not intended for use by children under the age of 13. We do not knowingly collect 
-              personal information from children. If you are a parent or guardian and believe your child has 
-              provided information to us, please contact us.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Children&apos;s Privacy</h3>
+              <p className="text-lg leading-relaxed">
+                SYNCED is not intended for use by children under the age of 13. We do not knowingly collect 
+                provided information to us, please contact us.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Changes to This Policy</h3>
-            <p className="text-lg">
-              We may update this privacy policy occasionally. Changes will be posted on this page with an updated date.
-              We encourage you to review this policy periodically for any changes.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Changes to This Policy</h3>
+              <p className="text-lg leading-relaxed">
+                We may update this privacy policy occasionally. Changes will be posted on this page with an updated date.
+                We encourage you to review this policy periodically for any changes.
+              </p>
+            </section>
 
-            <h3 className="text-2xl font-medium text-white mt-8">Contact</h3>
-            <p className="text-lg">
-              Questions about privacy? We&apos;re here to help. Contact us through our official channels.
-            </p>
+            <section>
+              <h3 className="text-2xl font-semibold text-white mb-4" style={{ fontFamily: "'Google Sans', sans-serif" }}>Contact</h3>
+              <p className="text-lg leading-relaxed">
+                Questions about privacy? We&apos;re here to help. Contact us through our official channels.
+              </p>
+            </section>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="w-full text-center text-white/40 text-sm mt-8">
-        <p>Anonymous voice communication is a science.</p>
-        <p className="mt-2">Stay safe. Be respectful. Report abuse.</p>
-        <p className="mt-4 text-xs">© {new Date().getFullYear()} Spark. All rights reserved.</p>
+      <footer className="w-full text-center text-white/40 text-sm py-8 border-t border-[#ff6b35]/10 mt-8">
+        <p>Academic connection through voice is a science.</p>
+        <p className="mt-2">Stay respectful. Collaborate meaningfully.</p>
+        <p className="mt-4 text-xs">© {new Date().getFullYear()} SYNCED. All rights reserved.</p>
       </footer>
     </div>
   );

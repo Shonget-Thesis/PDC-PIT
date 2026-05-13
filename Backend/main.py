@@ -7,7 +7,7 @@ import asyncio
 from datetime import datetime
 import os
 
-app = FastAPI(title="Spark - Anonymous Voice Chat Backend")
+app = FastAPI(title="SYNCED - Academic Peer Connection Backend")
 
 # CORS configuration - allow frontend origins
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
@@ -25,7 +25,7 @@ class ConnectionManager:
     def __init__(self):
         # Active WebSocket connections: {user_id: websocket}
         self.active_connections: Dict[str, WebSocket] = {}
-        # Users waiting for a match with their preferences: {user_id: {"interests": [...], "gender_pref": "..."}}
+        # Users waiting for a match with their preferences: {user_id: {"program": "...", "year_level": "...", "interests": [...]}}
         self.waiting_queue: Dict[str, dict] = {}
         # Current matches: {user_id: partner_id}
         self.matches: Dict[str, str] = {}
@@ -51,17 +51,17 @@ class ConnectionManager:
         print(f"User {user_id} disconnected. Total connections: {len(self.active_connections)}")
         return None
         
-    async def find_match(self, user_id: str, interests: list = None, gender_pref: str = "any", user_gender: str = ""):
-        """Find a compatible partner for the user based on interests and gender preference"""
+    async def find_match(self, user_id: str, field: str = "", program: str = "", year_level: str = "", interests: list = None):
+        """Find a compatible partner for the user based on field, program, year level, and interests"""
         # Remove user from queue if they're already there
         if user_id in self.waiting_queue:
             del self.waiting_queue[user_id]
         
         interests = interests or []
         best_match = None
-        best_score = 0
+        best_score = -1
         
-        print(f"Finding match for {user_id}: interests={interests}, gender_pref={gender_pref}, user_gender={user_gender}")
+        print(f"Finding match for {user_id}: field={field}, program={program}, year_level={year_level}, interests={interests}")
         print(f"Waiting queue size: {len(self.waiting_queue)}")
         
         # Find compatible users in waiting queue
@@ -71,47 +71,54 @@ class ConnectionManager:
                 
             # Calculate compatibility score
             score = 0
+            waiting_field = waiting_data.get("field", "")
+            waiting_program = waiting_data.get("program", "")
+            waiting_year_level = waiting_data.get("year_level", "")
             waiting_interests = waiting_data.get("interests", [])
-            waiting_gender_pref = waiting_data.get("gender_pref", "any")
-            waiting_user_gender = waiting_data.get("user_gender", "")
             
-            print(f"Checking {waiting_id}: interests={waiting_interests}, gender_pref={waiting_gender_pref}, user_gender={waiting_user_gender}")
+            print(f"Checking {waiting_id}: field={waiting_field}, program={waiting_program}, year_level={waiting_year_level}, interests={waiting_interests}")
             
-            # Check if gender preferences are compatible
-            # User A wants to match with gender_pref, so check if User B's gender matches
-            # User B wants to match with their gender_pref, so check if User A's gender matches
-            gender_compatible = True
+            # Score based on field similarity
+            if field and waiting_field:
+                if field == waiting_field:
+                    score += 30
+                    print(f"  Field match: {field}")
+                else:
+                    score += 5
+                    print(f"  Different field: {field} vs {waiting_field}")
             
-            # Check if this user's preference matches the waiting user's gender
-            if gender_pref != "any" and waiting_user_gender:
-                if gender_pref != waiting_user_gender:
-                    gender_compatible = False
-                    print(f"  Gender incompatible: {user_id} wants {gender_pref} but {waiting_id} is {waiting_user_gender}")
+            # Score based on program similarity as higher priority
+            if program and waiting_program:
+                if program == waiting_program:
+                    score += 50
+                    print(f"  Program match: {program}")
+                else:
+                    score += 10
+                    print(f"  Different programs: {program} vs {waiting_program}")
             
-            # Check if waiting user's preference matches this user's gender
-            if waiting_gender_pref != "any" and user_gender:
-                if waiting_gender_pref != user_gender:
-                    gender_compatible = False
-                    print(f"  Gender incompatible: {waiting_id} wants {waiting_gender_pref} but {user_id} is {user_gender}")
+            # Score based on year level similarity
+            if year_level and waiting_year_level:
+                if year_level == waiting_year_level:
+                    score += 20
+                    print(f"  Year level match: {year_level}")
+                else:
+                    score += 5
+                    print(f"  Different year levels: {year_level} vs {waiting_year_level}")
             
-            if not gender_compatible:
-                continue  # Skip if gender preferences are incompatible
-            
-            print(f"  Gender compatible!")
-            
-            # Calculate interest overlap
+            # Add interest overlap as secondary scoring
             if interests and waiting_interests:
                 common_interests = set(interests) & set(waiting_interests)
-                score = len(common_interests)
-                print(f"  Common interests: {common_interests}, score: {score}")
+                interest_score = len(common_interests) * 2
+                score += interest_score
+                print(f"  Common interests: {common_interests}, added {interest_score} points")
             
-            # Prioritize matches with common interests
-            if score > best_score or (score == 0 and best_match is None):
+            # Select best match
+            if score > best_score:
                 best_match = waiting_id
                 best_score = score
                 print(f"  New best match! Score: {best_score}")
         
-        if best_match:
+        if best_match and best_score >= 0:
             # Match found
             del self.waiting_queue[best_match]
             
@@ -124,9 +131,10 @@ class ConnectionManager:
         else:
             # No match found, add to waiting queue with preferences
             self.waiting_queue[user_id] = {
-                "interests": interests,
-                "gender_pref": gender_pref,
-                "user_gender": user_gender
+                "field": field,
+                "program": program,
+                "year_level": year_level,
+                "interests": interests
             }
             print(f"User {user_id} added to waiting queue. Queue size: {len(self.waiting_queue)}")
             return None
@@ -172,7 +180,7 @@ manager = ConnectionManager()
 @app.get("/")
 async def root():
     return {
-        "app": "Spark - Anonymous Voice Chat",
+        "app": "SYNCED - Academic Peer Connection Backend",
         "status": "running",
         "active_connections": len(manager.active_connections),
         "waiting_queue": len(manager.waiting_queue),
@@ -213,11 +221,12 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
             
             if message_type == "find_match":
                 # User wants to find a new partner
+                field = message.get("field", "")
+                program = message.get("program", "")
+                year_level = message.get("year_level", "")
                 interests = message.get("interests", [])
-                gender_pref = message.get("gender_pref", "any")
-                user_gender = message.get("user_gender", "")
                 
-                partner_id = await manager.find_match(user_id, interests, gender_pref, user_gender)
+                partner_id = await manager.find_match(user_id, field, program, year_level, interests)
                 
                 if partner_id:
                     # Match found - notify both users
@@ -255,10 +264,11 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         del manager.matches[partner_id]
                     
                     # Find new match with same preferences
+                    field = message.get("field", "")
+                    program = message.get("program", "")
+                    year_level = message.get("year_level", "")
                     interests = message.get("interests", [])
-                    gender_pref = message.get("gender_pref", "any")
-                    user_gender = message.get("user_gender", "")
-                    new_partner = await manager.find_match(user_id, interests, gender_pref, user_gender)
+                    new_partner = await manager.find_match(user_id, field, program, year_level, interests)
                     if new_partner:
                         await manager.send_to_user(user_id, {
                             "type": "match_found",

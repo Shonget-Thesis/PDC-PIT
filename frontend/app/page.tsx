@@ -32,6 +32,44 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+const PROGRAM_OPTIONS_MAP: Record<string, { value: string; label: string }[]> = {
+  stem: [
+    { value: 'BSCS', label: 'BS Computer Science' },
+    { value: 'BSIT', label: 'BS Information Technology' },
+    { value: 'BSECE', label: 'BS Electronics & Comm. Eng.' },
+    { value: 'BSME', label: 'BS Mechanical Eng.' },
+    { value: 'BSCE', label: 'BS Civil Eng.' },
+    { value: 'BSARCH', label: 'BS Architecture' },
+    { value: 'Other', label: 'Other' },
+  ],
+  humanities: [
+    { value: 'BSED', label: 'BS Education' },
+    { value: 'Other', label: 'Other' },
+  ],
+  'social-sciences': [
+    { value: 'BSBA', label: 'BS Business Admin.' },
+    { value: 'BSA', label: 'BS Accountancy' },
+    { value: 'Other', label: 'Other' },
+  ],
+  business: [
+    { value: 'BSBA', label: 'BS Business Admin.' },
+    { value: 'BSA', label: 'BS Accountancy' },
+    { value: 'BSED', label: 'BS Education' },
+    { value: 'Other', label: 'Other' },
+  ],
+  arts: [
+    { value: 'BSARCH', label: 'BS Architecture' },
+    { value: 'Other', label: 'Other' },
+  ],
+  health: [
+    { value: 'BSNursing', label: 'BS Nursing' },
+    { value: 'Other', label: 'Other' },
+  ],
+  other: [
+    { value: 'Other', label: 'Other' },
+  ],
+};
+
 export default function Home() {
   const [userId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
@@ -42,8 +80,10 @@ export default function Home() {
   const [onlineCount, setOnlineCount] = useState<number>(0);
   const [interests, setInterests] = useState<string[]>([]);
   const [interestInput, setInterestInput] = useState<string>('');
-  const [genderPreference, setGenderPreference] = useState<string>('any');
-  const [userGender, setUserGender] = useState<string>('');
+  const [field, setField] = useState<string>('');
+  const [program, setProgram] = useState<string>('');
+  const [otherProgram, setOtherProgram] = useState<string>('');
+  const [yearLevel, setYearLevel] = useState<string>('');
   const [isLocalTalking, setIsLocalTalking] = useState(false);
   const [isRemoteTalking, setIsRemoteTalking] = useState(false);
   const [showFireAnimation, setShowFireAnimation] = useState(false);
@@ -436,8 +476,10 @@ export default function Home() {
 
   // Start call - find a match
   const startCall = () => {
-    if (!userGender) {
-      setError('Please select your gender before starting a call');
+    const selectedProgram = program === 'Other' ? otherProgram.trim() : program;
+
+    if (!field || !selectedProgram || !yearLevel) {
+      setError('Please select your field, program, and year level before starting a call');
       return;
     }
 
@@ -451,14 +493,17 @@ export default function Home() {
     setConnectionState('waiting');
     wsRef.current.send(JSON.stringify({ 
       type: 'find_match',
+      field: field,
+      program: selectedProgram,
+      year_level: yearLevel,
       interests: interests,
-      gender_pref: genderPreference,
-      user_gender: userGender
     }));
   };
 
   // Skip to next partner
   const skipPartner = () => {
+    const selectedProgram = program === 'Other' ? otherProgram.trim() : program;
+
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       peerConnectionRef.current?.close();
       peerConnectionRef.current = null;
@@ -466,9 +511,10 @@ export default function Home() {
       setMessages([]); // Clear chat messages
       wsRef.current.send(JSON.stringify({ 
         type: 'skip',
+        field: field,
+        program: selectedProgram,
+        year_level: yearLevel,
         interests: interests,
-        gender_pref: genderPreference,
-        user_gender: userGender
       }));
     }
   };
@@ -520,47 +566,195 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col px-4 md:px-0">
+    <div className="min-h-screen flex flex-col px-4 md:px-0 bg-gradient-to-br from-[#0f0a07] via-[#1a1410] to-[#2d1f15]">
       {/* Header */}
-      <header className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-2 md:gap-0">
-        <div className="flex items-center gap-1 px-3 py-4 mb-2 mt-1 flex-wrap">
-          <img src="/logo.png" alt="Logo" className="w-10 h-10" />
-          <h1 className="text-4xl font-bold tracking-wide text-white">Spark</h1>
-          <div className="ml-4 px-3 py-1 bg-[#4a5d4a]/50 rounded-full border border-[#6b8e6b]/30">
-            <span className="text-white/80 text-sm">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#6b8e6b] mr-2 animate-pulse"></span>
+      <header className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-2 md:gap-0 px-8 py-6 border-b border-[#ff6b35]/20">
+        <div className="flex items-center gap-3 flex-wrap">
+          <img
+            src="/HeaderLogo.png"
+            alt="SYNCED"
+            className="h-10 w-auto object-contain md:h-12"
+            style={{ maxWidth: '180px' }}
+          />
+          <div className="ml-4 px-4 py-2 bg-[#ff6b35]/20 rounded-full border border-[#ff6b35]/40 hover:border-[#ff6b35]/60 transition-colors">
+            <span className="text-white/90 text-sm font-medium">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#ff6b35] mr-2 animate-pulse"></span>
               {onlineCount} online
             </span>
           </div>
         </div>
-        <nav className="flex gap-8 text-sm mr-0 md:mr-8">
-          <Link href="/about" className="text-white/80 hover:text-white transition-colors">About</Link>
-          <Link href="/rules" className="text-white/80 hover:text-white transition-colors">Rules</Link>
-          <Link href="/privacy" className="text-white/80 hover:text-white transition-colors">Privacy</Link>
+        <nav className="flex gap-8 text-sm mr-0 md:mr-0">
+          <Link href="/about" className="text-white/70 hover:text-white transition-colors">About</Link>
+          <Link href="/rules" className="text-white/70 hover:text-white transition-colors">Rules</Link>
+          <Link href="/privacy" className="text-white/70 hover:text-white transition-colors">Privacy</Link>
         </nav>
       </header>
 
+      {/* Hero Section */}
+      <section className="relative w-full overflow-hidden px-8 py-20 md:py-28 flex flex-col items-center text-center"
+        style={{
+          background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255,107,53,0.13) 0%, transparent 70%)',
+        }}
+      >
+        {/* Ambient grid lines */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,107,53,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,53,0.6) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
+          }}
+        />
+
+        {/* Floating orbs */}
+        <div className="pointer-events-none absolute top-8 left-[10%] w-48 h-48 rounded-full opacity-[0.07]"
+          style={{ background: 'radial-gradient(circle, #ff6b35, transparent)', filter: 'blur(32px)', animation: 'heroFloat1 8s ease-in-out infinite' }} />
+        <div className="pointer-events-none absolute bottom-0 right-[8%] w-64 h-64 rounded-full opacity-[0.05]"
+          style={{ background: 'radial-gradient(circle, #ff8a5a, transparent)', filter: 'blur(40px)', animation: 'heroFloat2 10s ease-in-out infinite' }} />
+        {/* Rotating conic glow */}
+        <div className="pointer-events-none absolute top-[-60px] left-1/2 w-[520px] h-[520px] opacity-[0.06]"
+          style={{
+            background: 'conic-gradient(from 0deg, transparent 0%, #ff6b35 15%, transparent 30%, #ff8a5a 55%, transparent 70%, #ff6b35 85%, transparent 100%)',
+            borderRadius: '50%',
+            filter: 'blur(28px)',
+            animation: 'heroRotateGlow 12s linear infinite',
+            transform: 'translateX(-50%)',
+          }} />
+
+        {/* Eyebrow label */}
+        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#ff6b35]/30 bg-[#ff6b35]/10 backdrop-blur-sm"
+          style={{ animation: 'heroFadeUp 0.6s ease both' }}>
+          <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b35] animate-pulse" />
+          <span className="text-[#ff8a5a] text-xs font-semibold tracking-widest uppercase">Academic Voice Chat</span>
+        </div>
+
+        {/* Wordmark */}
+        <div
+          style={{ animation: 'heroFadeUp 0.6s 0.05s ease both', opacity: 0 }}
+          className="mb-4"
+        >
+          <img
+            src="/Wordmark.svg"
+            alt="SYNCED"
+            className="h-20 md:h-28 w-auto mx-auto"
+          />
+        </div>
+
+        {/* Subheading */}
+        <h2
+          className="text-2xl md:text-4xl font-semibold tracking-tight text-white max-w-3xl leading-[1.15]"
+          style={{
+            fontFamily: "'Google Sans', sans-serif",
+            letterSpacing: '-0.02em',
+            animation: 'heroFadeUp 0.6s 0.1s ease both',
+            opacity: 0,
+          }}
+        >
+          Study smarter,{' '}
+          <span className="relative inline-block">
+            <span style={{ background: 'linear-gradient(135deg, #ff6b35 0%, #ff8a5a 50%, #ffaa7a 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              together.
+            </span>
+            {/* Underline accent */}
+            <span className="absolute -bottom-1 left-0 w-full h-[3px] rounded-full"
+              style={{ background: 'linear-gradient(90deg, #ff6b35, transparent)', animation: 'heroUnderline 0.8s 0.6s ease both', transformOrigin: 'left', transform: 'scaleX(0)' }} />
+          </span>
+        </h2>
+
+        {/* Subheadline */}
+        <p className="mt-6 text-white/50 text-lg md:text-xl max-w-xl leading-relaxed"
+          style={{ fontFamily: "'Geist', sans-serif", animation: 'heroFadeUp 0.6s 0.2s ease both', opacity: 0 }}>
+          Connect instantly with students across programs and year levels.
+          Real voices, real learning — no sign-up required.
+        </p>
+
+        {/* Feature pills */}
+        <div className="mt-10 flex flex-wrap justify-center gap-3"
+          style={{ animation: 'heroFadeUp 0.6s 0.3s ease both', opacity: 0 }}>
+          {[
+            { top: 'Peer-to-Peer', bottom: 'Academic Exchange' },
+            { top: 'Academic Context', bottom: 'Matching' },
+            { top: 'Zero Footprint', bottom: 'Anonymity' },
+            { top: 'Instant Re-Sync', bottom: 'Skip Functionality' },
+            { top: 'Full Audio', bottom: 'Toggle Sovereignty' },
+            { top: 'Real-Time', bottom: 'Status Transparency' },
+          ].map((pill) => (
+            <div key={pill.top + pill.bottom}
+              className="flex flex-col items-center px-5 py-3 rounded-2xl bg-white/[0.04] border border-white/10 backdrop-blur-sm text-white/70 text-sm font-medium transition-all duration-300 cursor-default"
+              style={{ minWidth: '130px' }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.07)';
+                (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,107,53,0.5)';
+                (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.95)';
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 0 18px rgba(255,107,53,0.18)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)';
+                (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.1)';
+                (e.currentTarget as HTMLDivElement).style.color = 'rgba(255,255,255,0.7)';
+                (e.currentTarget as HTMLDivElement).style.boxShadow = 'none';
+              }}
+            >
+              <span className="text-[#ff8a5a] text-xs font-semibold tracking-wide leading-tight">{pill.top}</span>
+              <span className="text-white/60 text-xs leading-tight mt-0.5">{pill.bottom}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Scroll cue */}
+        <div className="mt-14 flex flex-col items-center gap-2 opacity-30"
+          style={{ animation: 'heroFadeUp 0.6s 0.5s ease both' }}>
+          <span className="text-xs tracking-widest text-white/40 uppercase">Start below</span>
+          <div className="w-px h-8 bg-gradient-to-b from-[#ff6b35]/60 to-transparent" style={{ animation: 'scrollCue 1.6s ease-in-out infinite' }} />
+        </div>
+
+        <style>{`
+          @keyframes heroFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+          @keyframes heroUnderline {
+            from { transform: scaleX(0); }
+            to   { transform: scaleX(1); }
+          }
+          @keyframes heroFloat1 {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50%       { transform: translateY(-18px) translateX(8px); }
+          }
+          @keyframes heroFloat2 {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            50%       { transform: translateY(14px) translateX(-10px); }
+          }
+          @keyframes scrollCue {
+            0%, 100% { opacity: 0.3; transform: scaleY(1); }
+            50%       { opacity: 1;   transform: scaleY(1.2); }
+          }
+          @keyframes heroRotateGlow {
+            0%   { transform: translateX(-50%) rotate(0deg); }
+            100% { transform: translateX(-50%) rotate(360deg); }
+          }
+        `}</style>
+      </section>
+
       {/* Main Content - Split Layout */}
-      <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden pr-0 md:pr-8">
+      <div className="flex-1 flex flex-col md:flex-row gap-6 overflow-hidden p-4 md:p-8">
         {/* Left Side - Voice Call Controls */}
-        <main className="flex-1 flex flex-col min-h-0 bg-[#2d3a2d]/50 backdrop-blur-sm rounded-2xl border border-[#4a5d4a] ml-0 md:ml-9 p-4 md:p-8">
+        <main className="flex-1 flex flex-col min-h-0 bg-[#1a1410]/60 backdrop-blur-md rounded-2xl border border-[#ff6b35]/30 hover:border-[#ff6b35]/50 transition-colors p-4 md:p-8">
           {/* Status Display */}
           <div className="flex-1 flex flex-col items-center justify-center">
           <div className="text-center mb-12">
             <div className="mb-6 relative">
               {connectionState === 'disconnected' && (
-                <div className="w-32 h-32 mx-auto rounded-full bg-[#4a5d4a] flex items-center justify-center border-4 border-[#5a6d5a]">
-                  <Phone className="w-12 h-12 text-white" />
+                <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-[#ff6b35]/20 to-[#ff8a5a]/20 flex items-center justify-center border-4 border-[#ff6b35]/40">
+                  <Phone className="w-12 h-12 text-[#ff6b35]" />
                 </div>
               )}
               {connectionState === 'waiting' && (
-                <div className="w-32 h-32 mx-auto rounded-full bg-[#4a5d4a] flex items-center justify-center border-4 border-[#6b8e6b] animate-pulse">
-                  <Loader2 className="w-12 h-12 text-white animate-spin" />
+                <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-[#ff6b35]/20 to-[#ff8a5a]/20 flex items-center justify-center border-4 border-[#ff6b35]/60 animate-pulse">
+                  <Loader2 className="w-12 h-12 text-[#ff6b35] animate-spin" />
                 </div>
               )}
               {connectionState === 'connecting' && (
-                <div className="w-32 h-32 mx-auto rounded-full bg-[#4a5d4a] flex items-center justify-center border-4 border-[#6b8e6b] animate-pulse">
-                  <Phone className="w-12 h-12 text-white" />
+                <div className="w-32 h-32 mx-auto rounded-full bg-gradient-to-br from-[#ff6b35]/20 to-[#ff8a5a]/20 flex items-center justify-center border-4 border-[#ff6b35]/60 animate-pulse">
+                  <Phone className="w-12 h-12 text-[#ff6b35]" />
                 </div>
               )}
               {connectionState === 'connected' && (
@@ -568,12 +762,12 @@ export default function Home() {
                   {/* Left Avatar - You */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-[#6b8e6b] flex items-center justify-center border-4 border-[#7a9e7a] shadow-lg shadow-[#6b8e6b]/50">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8a5a] flex items-center justify-center border-4 border-[#ff6b35]/60 shadow-lg shadow-[#ff6b35]/30">
                         <User className="w-10 h-10 text-white" />
                       </div>
                       {/* Talking indicator - animated ring */}
                       {isLocalTalking && !isMuted && (
-                        <div className="absolute inset-0 rounded-full border-4 border-[#6b8e6b] animate-ping opacity-75"></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-[#ff6b35] animate-ping opacity-75"></div>
                       )}
                     </div>
                     <span className="text-white/80 text-sm font-medium">You</span>
@@ -581,20 +775,20 @@ export default function Home() {
 
                   {/* Connection Line */}
                   <div className="flex items-center gap-1">
-                    <div className="w-8 h-0.5 bg-[#6b8e6b] animate-pulse"></div>
-                    <Phone className="w-5 h-5 text-[#6b8e6b] animate-pulse" />
-                    <div className="w-8 h-0.5 bg-[#6b8e6b] animate-pulse"></div>
+                    <div className="w-8 h-0.5 bg-[#ff6b35]/60 animate-pulse"></div>
+                    <Phone className="w-5 h-5 text-[#ff6b35] animate-pulse" />
+                    <div className="w-8 h-0.5 bg-[#ff6b35]/60 animate-pulse"></div>
                   </div>
 
                   {/* Right Avatar - Stranger */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-[#6b8e6b] flex items-center justify-center border-4 border-[#7a9e7a] shadow-lg shadow-[#6b8e6b]/50">
+                      <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8a5a] flex items-center justify-center border-4 border-[#ff6b35]/60 shadow-lg shadow-[#ff6b35]/30">
                         <User className="w-10 h-10 text-white" />
                       </div>
                       {/* Talking indicator - shows when stranger talks */}
                       {isRemoteTalking && (
-                        <div className="absolute inset-0 rounded-full border-4 border-[#6b8e6b] animate-ping opacity-75"></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-[#ff6b35] animate-ping opacity-75"></div>
                       )}
                     </div>
                     <span className="text-white/80 text-sm font-medium">Stranger</span>
@@ -603,8 +797,8 @@ export default function Home() {
               )}
             </div>
 
-            <h2 className="text-4xl font-light mb-4 text-white">
-              {connectionState === 'disconnected' && 'Anonymous voice chat.'}
+            <h2 className="text-4xl font-bold mb-4 text-white" style={{ fontFamily: "'Google Sans', sans-serif" }}>
+              {connectionState === 'disconnected' && 'Find your study partner.'}
               {connectionState === 'waiting' && 'Finding a partner...'}
               {connectionState === 'connecting' && 'Connecting...'}
               {connectionState === 'connected' && 'Connected'}
@@ -612,28 +806,28 @@ export default function Home() {
 
             <p className="text-white/60 text-lg max-w-md mx-auto">
               {connectionState === 'disconnected' &&
-                'Connect with random strangers worldwide through voice. No sign-up required.'}
-              {connectionState === 'waiting' && 'Searching for someone to talk to...'}
+                'Connect with students across different programs and year levels. Collaborate, mentor, and grow together.'}
+              {connectionState === 'waiting' && 'Searching for a compatible study partner...'}
               {connectionState === 'connecting' && 'Establishing secure connection...'}
-              {connectionState === 'connected' && "You're now connected. Enjoy your conversation!"}
+              {connectionState === 'connected' && "You're now connected. Start your academic journey together!"}
             </p>
 
             {error && (
-              <div className="mt-4 px-6 py-3 bg-[#8b4949]/20 border border-[#8b4949] rounded-lg text-[#ff9999] text-sm">
+              <div className="mt-4 px-6 py-3 bg-[#ff6b35]/20 border border-[#ff6b35]/40 rounded-lg text-[#ff8a5a] text-sm">
                 {error}
               </div>
             )}
           </div>
 
           {/* Controls */}
-          <div className="flex gap-4 items-center justify-center">
+          <div className="flex gap-4 items-center justify-center flex-wrap mb-4">
             {connectionState === 'disconnected' ? (
               <button
                 onClick={startCall}
-                className="px-8 py-4 bg-[#6b8e6b] hover:bg-[#7a9e7a] text-white rounded-full font-medium transition-all flex items-center gap-3 text-lg shadow-lg hover:shadow-xl hover:scale-105"
+                className="w-full max-w-sm md:w-auto px-8 py-4 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] hover:from-[#ff8a5a] hover:to-[#ffaa7a] text-white rounded-full font-bold transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-[#ff6b35]/40 hover:shadow-[#ff6b35]/60 hover:scale-105"
               >
-                <Phone className="w-6 h-6" />
-                Start Call
+                <img src="/syncedIcon.svg" alt="Sync" className="w-10 h-8" />
+                Sync Now
               </button>
             ) : (
               <>
@@ -643,8 +837,8 @@ export default function Home() {
                       onClick={toggleMute}
                       className={`p-4 rounded-full transition-all ${
                         isMuted
-                          ? 'bg-[#8b4949] hover:bg-[#9b5959]'
-                          : 'bg-[#4a5d4a] hover:bg-[#5a6d5a]'
+                          ? 'bg-[#ff6b35]/40 hover:bg-[#ff6b35]/60 border border-[#ff6b35]/60'
+                          : 'bg-[#ff6b35] hover:bg-[#ff8a5a]'
                       } text-white shadow-lg hover:scale-105`}
                       title={isMuted ? 'Unmute' : 'Mute'}
                     >
@@ -653,7 +847,7 @@ export default function Home() {
 
                     <button
                       onClick={skipPartner}
-                      className="p-4 bg-[#4a5d4a] hover:bg-[#5a6d5a] text-white rounded-full transition-all shadow-lg hover:scale-105"
+                      className="p-4 bg-[#ff6b35]/30 hover:bg-[#ff6b35]/50 border border-[#ff6b35]/40 text-white rounded-full transition-all shadow-lg hover:scale-105"
                       title="Skip to next person"
                     >
                       <SkipForward className="w-6 h-6" />
@@ -663,7 +857,7 @@ export default function Home() {
 
                 <button
                   onClick={endCall}
-                  className="px-8 py-4 bg-[#8b4949] hover:bg-[#9b5959] text-white rounded-full font-medium transition-all flex items-center gap-3 text-lg shadow-lg hover:scale-105"
+                  className="px-8 py-4 bg-[#ff6b35]/20 hover:bg-[#ff6b35]/40 border border-[#ff6b35]/40 text-[#ff8a5a] rounded-full font-bold transition-all flex items-center gap-3 text-lg shadow-lg hover:scale-105"
                 >
                   <PhoneOff className="w-6 h-6" />
                   End Call
@@ -673,18 +867,105 @@ export default function Home() {
           </div>
           </div>
 
-          {/* Filters at Bottom - OmeTV Style */}
+          {/* Filters at Bottom - Academic Profile */}
           {connectionState === 'disconnected' && (
-            <div className="flex flex-col gap-3 items-center justify-center pt-4 border-t border-[#4a5d4a]/50">
-              <div className="flex gap-3 items-start">
-                <span className="text-white text-sm mt-2">Interests:</span>
-                <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-[#3a4a3a] rounded-lg border border-[#4a5d4a] max-w-70">
+            <div className="flex flex-col gap-4 items-center justify-center pt-4 border-t border-[#ff6b35]/20">
+              {/* Field Selection */}
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 cursor-pointer hover:bg-[#1a1410] hover:border-[#ff6b35]/50 transition-all w-full md:w-auto">
+                <User className="w-4 h-4 text-[#ff6b35]" />
+                <span className="text-white text-sm font-medium">Field of Study:</span>
+                <select
+                  value={field}
+                  onChange={(e) => {
+                    setField(e.target.value);
+                    setProgram('');
+                    setOtherProgram('');
+                  }}
+                  className="bg-transparent text-white text-sm focus:outline-none cursor-pointer font-medium ml-auto"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="" style={{ backgroundColor: '#1a1410', color: 'white' }}>Select</option>
+                  <option value="stem" style={{ backgroundColor: '#1a1410', color: 'white' }}>STEM</option>
+                  <option value="humanities" style={{ backgroundColor: '#1a1410', color: 'white' }}>Humanities</option>
+                  <option value="social-sciences" style={{ backgroundColor: '#1a1410', color: 'white' }}>Social Sciences</option>
+                  <option value="business" style={{ backgroundColor: '#1a1410', color: 'white' }}>Business</option>
+                  <option value="arts" style={{ backgroundColor: '#1a1410', color: 'white' }}>Arts & Design</option>
+                  <option value="health" style={{ backgroundColor: '#1a1410', color: 'white' }}>Health Sciences</option>
+                  <option value="other" style={{ backgroundColor: '#1a1410', color: 'white' }}>Other</option>
+                </select>
+              </div>
+
+              {/* Program Selection */}
+              {field && (
+                <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 cursor-pointer hover:bg-[#1a1410] hover:border-[#ff6b35]/50 transition-all w-full md:w-auto">
+                    <Globe className="w-4 h-4 text-[#ff6b35]" />
+                    <span className="text-white text-sm font-medium">Program:</span>
+                    <select
+                      value={program}
+                      onChange={(e) => {
+                        setProgram(e.target.value);
+                        if (e.target.value !== 'Other') {
+                          setOtherProgram('');
+                        }
+                      }}
+                      className="bg-transparent text-white text-sm focus:outline-none cursor-pointer font-medium ml-auto"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      <option value="" style={{ backgroundColor: '#1a1410', color: 'white' }}>Select</option>
+                      {(PROGRAM_OPTIONS_MAP[field] ?? PROGRAM_OPTIONS_MAP.other).map((option) => (
+                        <option key={option.value} value={option.value} style={{ backgroundColor: '#1a1410', color: 'white' }}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {program === 'Other' && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 transition-all w-full md:w-[320px]">
+                      <span className="text-white text-sm font-medium">Please specify:</span>
+                      <input
+                        type="text"
+                        value={otherProgram}
+                        onChange={(e) => setOtherProgram(e.target.value)}
+                        placeholder="Your program"
+                        className="flex-1 bg-transparent text-white text-sm focus:outline-none font-medium placeholder:text-white/40"
+                        style={{ colorScheme: 'dark' }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Year Level Selection */}
+              <div className="flex items-center gap-2 px-4 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 cursor-pointer hover:bg-[#1a1410] hover:border-[#ff6b35]/50 transition-all w-full md:w-auto">
+                <User className="w-4 h-4 text-[#ff6b35]" />
+                <span className="text-white text-sm font-medium">Year Level:</span>
+                <select
+                  value={yearLevel}
+                  onChange={(e) => setYearLevel(e.target.value)}
+                  className="bg-transparent text-white text-sm focus:outline-none cursor-pointer font-medium ml-auto"
+                  style={{ colorScheme: 'dark' }}
+                >
+                  <option value="" style={{ backgroundColor: '#1a1410', color: 'white' }}>Select</option>
+                  <option value="1st" style={{ backgroundColor: '#1a1410', color: 'white' }}>1st Year</option>
+                  <option value="2nd" style={{ backgroundColor: '#1a1410', color: 'white' }}>2nd Year</option>
+                  <option value="3rd" style={{ backgroundColor: '#1a1410', color: 'white' }}>3rd Year</option>
+                  <option value="4th" style={{ backgroundColor: '#1a1410', color: 'white' }}>4th Year</option>
+                  <option value="graduate" style={{ backgroundColor: '#1a1410', color: 'white' }}>Graduate</option>
+                </select>
+              </div>
+
+              {/* Interests/Topics */}
+              <div className="flex gap-3 items-start w-full">
+                <span className="text-white text-sm mt-2 font-medium whitespace-nowrap">Subject / Topic:</span>
+                <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 max-w-full md:max-w-70 flex-1">
                   {interests.map((tag, index) => (
-                    <div key={index} className="flex items-center gap-1 px-2 py-0.5 bg-[#6b8e6b] rounded-full text-white text-xs shrink-0">
+                    <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] rounded-full text-white text-xs shrink-0 font-medium">
                       <span>{tag}</span>
                       <button
                         onClick={() => setInterests(interests.filter((_, i) => i !== index))}
-                        className="hover:bg-[#5a7d5a] rounded-full p-0.5 transition-colors"
+                        className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
                       >
                         <X className="w-3 h-3" />
                       </button>
@@ -703,39 +984,9 @@ export default function Home() {
                         setInterestInput('');
                       }
                     }}
-                    placeholder={interests.length === 0 ? "Type and press Enter" : ""}
-                    className="bg-transparent text-white text-sm focus:outline-none placeholder:text-white/40 min-w-25"
+                    placeholder={interests.length === 0 ? "Type topic and press Enter" : ""}
+                    className="bg-transparent text-white text-sm focus:outline-none placeholder:text-white/40 min-w-25 flex-1"
                   />
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex items-center gap-2 px-4 py-2 bg-[#3a4a3a] rounded-lg border border-[#4a5d4a] cursor-pointer hover:bg-[#4a5d4a] transition-colors">
-                  <User className="w-4 h-4 text-white" />
-                  <span className="text-white text-sm">I am:</span>
-                  <select
-                    value={userGender}
-                    onChange={(e) => setUserGender(e.target.value)}
-                    className="bg-transparent text-white text-sm focus:outline-none cursor-pointer"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Select</option>
-                    <option value="male" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Male</option>
-                    <option value="female" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Female</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-[#3a4a3a] rounded-lg border border-[#4a5d4a] cursor-pointer hover:bg-[#4a5d4a] transition-colors">
-                  <User className="w-4 h-4 text-white" />
-                  <span className="text-white text-sm">Match with:</span>
-                  <select
-                    value={genderPreference}
-                    onChange={(e) => setGenderPreference(e.target.value)}
-                    className="bg-transparent text-white text-sm focus:outline-none cursor-pointer"
-                    style={{ colorScheme: 'dark' }}
-                  >
-                    <option value="any" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Anyone</option>
-                    <option value="male" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Male</option>
-                    <option value="female" style={{ backgroundColor: '#3a4a3a', color: 'white' }}>Female</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -743,10 +994,10 @@ export default function Home() {
         </main>
 
         {/* Right Side - Chat Panel */}
-        <aside className="w-full md:w-96 h-96 md:h-auto bg-[#2d3a2d]/50 backdrop-blur-sm rounded-2xl border border-[#4a5d4a] flex flex-col overflow-hidden">
+        <aside className="w-full md:w-96 h-96 md:h-auto bg-[#1a1410]/60 backdrop-blur-md rounded-2xl border border-[#ff6b35]/30 hover:border-[#ff6b35]/50 transition-colors flex flex-col overflow-hidden">
           {/* Chat Header */}
-          <div className="p-4 border-b border-[#4a5d4a]">
-            <h3 className="text-white font-medium">Chat</h3>
+          <div className="p-4 border-b border-[#ff6b35]/20 bg-[#0f0a07]/40">
+            <h3 className="text-white font-bold" style={{ fontFamily: "'Google Sans', sans-serif" }}>Chat</h3>
             <p className="text-white/60 text-sm">
               {connectionState === 'connected' ? 'Send messages to your partner' : 'Connect to start chatting'}
             </p>
@@ -770,12 +1021,12 @@ export default function Home() {
                     <div
                       className={`max-w-[80%] px-4 py-2 rounded-2xl ${
                         msg.isMine
-                          ? 'bg-[#6b8e6b] text-white'
-                          : 'bg-[#4a5d4a] text-white'
+                          ? 'bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] text-white'
+                          : 'bg-[#2d1f15] border border-[#ff6b35]/30 text-white'
                       }`}
                     >
                       <p className="text-sm wrap-break-word">{msg.text}</p>
-                      <span className="text-xs opacity-60 mt-1 block">
+                      <span className="text-xs opacity-70 mt-1 block">
                         {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
@@ -787,7 +1038,7 @@ export default function Home() {
           </div>
 
           {/* Message Input */}
-          <div className="p-4 border-t border-[#4a5d4a]">
+          <div className="p-4 border-t border-[#ff6b35]/20 bg-[#0f0a07]/40">
             <div className="flex gap-2">
               <input
                 type="text"
@@ -796,12 +1047,12 @@ export default function Home() {
                 onKeyPress={handleKeyPress}
                 disabled={connectionState !== 'connected'}
                 placeholder={connectionState === 'connected' ? 'Type a message...' : 'Connect to chat'}
-                className="flex-1 px-4 py-2 bg-[#3a4a3a] border border-[#4a5d4a] rounded-full text-white placeholder:text-white/40 focus:outline-none focus:border-[#6b8e6b] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-[#0f0a07] border border-[#ff6b35]/30 rounded-full text-white placeholder:text-white/40 focus:outline-none focus:border-[#ff6b35]/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               />
               <button
                 onClick={sendMessage}
                 disabled={!messageInput.trim() || connectionState !== 'connected'}
-                className="p-2 bg-[#6b8e6b] hover:bg-[#7a9e7a] text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#6b8e6b]"
+                className="p-2 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] hover:from-[#ff8a5a] hover:to-[#ffaa7a] text-white rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-[#ff6b35] disabled:hover:to-[#ff8a5a]"
               >
                 <Send className="w-5 h-5" />
               </button>
@@ -811,10 +1062,10 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="w-full text-center text-white/40 text-sm mt-8">
-        <p>Anonymous voice communication is a science.</p>
-        <p className="mt-2">Stay safe. Be respectful. Report abuse.</p>
-        <p className="mt-4 text-xs">© {new Date().getFullYear()} Spark. All rights reserved.</p>
+      <footer className="w-full text-center text-white/40 text-sm py-8 border-t border-[#ff6b35]/10 mt-8">
+        <p>Academic connection through voice is a science.</p>
+        <p className="mt-2">Stay respectful. Collaborate meaningfully.</p>
+        <p className="mt-4 text-xs">© {new Date().getFullYear()} SYNCED. All rights reserved.</p>
       </footer>
 
       {/* Hidden audio element for remote stream */}
@@ -826,7 +1077,7 @@ export default function Home() {
           <div className="relative">
             <div className="text-9xl animate-bounce">🔥</div>
             <div className="absolute top-0 left-0 text-9xl animate-ping opacity-75">🔥</div>
-            <div className="mt-4 text-4xl font-bold text-white text-center animate-pulse">Match Found!</div>
+            <div className="mt-4 text-4xl font-bold text-[#ff6b35] text-center animate-pulse" style={{ fontFamily: "'Google Sans', sans-serif" }}>Match Found!</div>
           </div>
         </div>
       )}

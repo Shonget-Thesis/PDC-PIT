@@ -1,14 +1,25 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'Geist';
+  src: url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900') format('truetype');
+}
+
+@font-face {
+  font-family: 'Google Sans';
+  src: url('https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700') format('truetype');
+}
+
 :root {
-  /* Dark green/olive theme inspired by the probiotic image */
-  --background: #3a4a3a;
-  --background-dark: #2d3a2d;
-  --foreground: #f0f0f0;
-  --accent: #4a5d4a;
-  --accent-hover: #5a6d5a;
-  --success: #6b8e6b;
-  --danger: #8b4949;
+  /* PDC Concepts Applied - Orange and Dark Brown theme */
+  --background: #1a1410;
+  --background-dark: #0f0a07;
+  --foreground: #f5f5f5;
+  --accent: #ff6b35;
+  --accent-dark: #e55a1f;
+  --accent-light: #ff8a5a;
+  --success: #4caf50;
+  --danger: #e53935;
 }
 
 @theme inline {
@@ -18,15 +29,114 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: linear-gradient(135deg, var(--background-dark) 0%, var(--background) 100%);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-family: 'Geist', 'Google Sans', system-ui, -apple-system, sans-serif;
+  font-optical-sizing: auto;
+  font-size: 16px;
+  line-height: 1.6;
   min-height: 100vh;
   margin: 0;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
   box-sizing: border-box;
+}
+
+/* Typography classes */
+.heading-xl {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.heading-lg {
+  font-family: 'Google Sans', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.heading-md {
+  font-family: 'Geist', sans-serif;
+  font-size: 1.875rem;
+  font-weight: 600;
+}
+
+.heading-sm {
+  font-family: 'Geist', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.body-lg {
+  font-family: 'Geist', sans-serif;
+  font-size: 1.125rem;
+  font-weight: 400;
+}
+
+.body-md {
+  font-family: 'Geist', sans-serif;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.body-sm {
+  font-family: 'Geist', sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+/* Button styles */
+button {
+  font-family: 'Geist', sans-serif;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  border: none;
+  border-radius: 0.75rem;
+}
+
+/* Links */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--accent-light);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--accent);
+  color: white;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-light);
 }

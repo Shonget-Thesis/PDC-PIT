@@ -88,9 +88,10 @@ async def measure_match_metrics(backend_url: str, client_count: int) -> MatchMet
                     json.dumps(
                         {
                             "type": "find_match",
+                            "field": "stem",
+                            "program": "BSCS",
+                            "year_level": "3rd Year",
                             "interests": ["stress-test"],
-                            "gender_pref": "any",
-                            "user_gender": "",
                         }
                     )
                 )
@@ -142,9 +143,10 @@ async def measure_skip_metrics(backend_url: str) -> SkipMetrics:
                 json.dumps(
                     {
                         "type": "find_match",
+                        "field": "stem",
+                        "program": "BSCS",
+                        "year_level": "3rd Year",
                         "interests": ["stress-test"],
-                        "gender_pref": "any",
-                        "user_gender": "",
                     }
                 )
             )
@@ -157,9 +159,10 @@ async def measure_skip_metrics(backend_url: str) -> SkipMetrics:
             json.dumps(
                 {
                     "type": "skip",
+                    "field": "stem",
+                    "program": "BSCS",
+                    "year_level": "3rd Year",
                     "interests": ["stress-test"],
-                    "gender_pref": "any",
-                    "user_gender": "",
                 }
             )
         )

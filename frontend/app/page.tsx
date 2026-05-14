@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Phone, PhoneOff, Mic, MicOff, SkipForward, Loader2, Send, User, Globe, X } from 'lucide-react';
 
 // WebSocket server URL - use environment variable or fallback to localhost
@@ -347,6 +348,7 @@ export default function Home() {
         setError('Connection failed after maximum attempts. Please refresh the page.');
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, connectionState, startHeartbeat, stopHeartbeat, getReconnectDelay]);
 
   // Get user media (microphone)
@@ -384,6 +386,33 @@ export default function Home() {
     localAnalyserRef.current = analyser;
     
     detectLocalAudio();
+  };
+
+  // Detect remote audio levels (moved before useEffect that depends on it)
+  const detectRemoteAudio = () => {
+    if (!remoteAnalyserRef.current) return;
+    
+    const analyser = remoteAnalyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    
+    const checkAudio = () => {
+      if (connectionState !== 'connected') {
+        setIsRemoteTalking(false);
+        return;
+      }
+      
+      analyser.getByteFrequencyData(dataArray);
+      
+      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+      const threshold = 10; // Lower threshold = more sensitive
+      
+      setIsRemoteTalking(average > threshold);
+      
+      requestAnimationFrame(checkAudio);
+    };
+    
+    checkAudio();
   };
 
   // Detect local audio levels
@@ -434,33 +463,6 @@ export default function Home() {
     remoteAnalyserRef.current = analyser;
     
     detectRemoteAudio();
-  };
-
-  // Detect remote audio levels
-  const detectRemoteAudio = () => {
-    if (!remoteAnalyserRef.current) return;
-    
-    const analyser = remoteAnalyserRef.current;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-    
-    const checkAudio = () => {
-      if (connectionState !== 'connected') {
-        setIsRemoteTalking(false);
-        return;
-      }
-      
-      analyser.getByteFrequencyData(dataArray);
-      
-      const average = dataArray.reduce((a, b) => a + b) / bufferLength;
-      const threshold = 10; // Lower threshold = more sensitive
-      
-      setIsRemoteTalking(average > threshold);
-      
-      requestAnimationFrame(checkAudio);
-    };
-    
-    checkAudio();
   };
 
   // Create peer connection
@@ -730,6 +732,7 @@ export default function Home() {
     return () => {
       endCall();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -737,9 +740,11 @@ export default function Home() {
       {/* Header */}
       <header className="w-full flex flex-wrap md:flex-nowrap justify-between items-center gap-2 md:gap-0 px-8 py-6 border-b border-[#ff6b35]/20">
         <div className="flex items-center gap-3 flex-wrap">
-          <img
+          <Image
             src="/HeaderLogo.png"
             alt="SYNCED"
+            width={180}
+            height={48}
             className="h-10 w-auto object-contain md:h-12"
             style={{ maxWidth: '180px' }}
           />
@@ -798,9 +803,11 @@ export default function Home() {
           style={{ animation: 'heroFadeUp 0.6s 0.05s ease both', opacity: 0 }}
           className="mb-4"
         >
-          <img
+          <Image
             src="/Wordmark.svg"
             alt="SYNCED"
+            width={112}
+            height={112}
             className="h-20 md:h-28 w-auto mx-auto"
           />
         </div>
@@ -1004,7 +1011,7 @@ export default function Home() {
                 onClick={startCall}
                 className="w-full max-w-sm md:w-auto px-8 py-4 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] hover:from-[#ff8a5a] hover:to-[#ffaa7a] text-white rounded-full font-bold transition-all flex items-center justify-center gap-3 text-lg shadow-lg shadow-[#ff6b35]/40 hover:shadow-[#ff6b35]/60 hover:scale-105"
               >
-                <img src="/syncedIcon.svg" alt="Sync" className="w-10 h-8" />
+                <Image src="/syncedIcon.svg" alt="Sync" width={40} height={32} />
                 Sync Now
               </button>
             ) : (

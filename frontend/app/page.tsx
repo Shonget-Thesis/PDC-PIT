@@ -80,6 +80,32 @@ const PROGRAM_OPTIONS_MAP: Record<string, { value: string; label: string }[]> = 
   ],
 };
 
+// Helper function to format field names
+const formatFieldName = (field: string): string => {
+  const fieldMap: Record<string, string> = {
+    'stem': 'STEM',
+    'humanities': 'Humanities',
+    'social-sciences': 'Social Sciences',
+    'business': 'Business',
+    'arts': 'Arts & Design',
+    'health': 'Health Sciences',
+    'other': 'Other',
+  };
+  return fieldMap[field] || field;
+};
+
+// Helper function to format year level
+const formatYearLevel = (year: string): string => {
+  const yearMap: Record<string, string> = {
+    '1st': '1st Year',
+    '2nd': '2nd Year',
+    '3rd': '3rd Year',
+    '4th': '4th Year',
+    '5th': '5th Year',
+  };
+  return yearMap[year] || year;
+};
+
 export default function Home() {
   const [userId] = useState(() => `user_${Math.random().toString(36).substr(2, 9)}`);
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
@@ -969,12 +995,12 @@ export default function Home() {
                       )}
                     </div>
                     <div className="text-center">
-                      <span className="text-white/80 text-sm font-medium block">{remoteUserInfo?.nickname || 'Buddy'}</span>
+                      <span className="text-white/90 text-sm font-semibold block mb-2">&quot;{remoteUserInfo?.nickname || 'Buddy'}&quot;</span>
                       {remoteUserInfo && (
-                        <>
-                          <span className="text-white/60 text-xs block">{remoteUserInfo.field}</span>
-                          <span className="text-white/60 text-xs block">Year {remoteUserInfo.yearLevel}</span>
-                        </>
+                        <div className="text-white/70 text-xs space-y-1">
+                          <div>Program: <span className="text-white/90 font-medium">{formatFieldName(remoteUserInfo.field)}</span></div>
+                          <div>Year: <span className="text-white/90 font-medium">{formatYearLevel(remoteUserInfo.yearLevel)}</span></div>
+                        </div>
                       )}
                     </div>
                   </div>

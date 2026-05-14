@@ -25,10 +25,12 @@ class ConnectionManager:
     def __init__(self):
         # Active WebSocket connections: {user_id: websocket}
         self.active_connections: Dict[str, WebSocket] = {}
-        # Users waiting for a match with their preferences: {user_id: {"program": "...", "year_level": "...", "interests": [...]}}
+        # Users waiting for a match with their preferences: {user_id: {"program": "...", "year_level": "...", "interests": [...], "nickname": "...", "field": "..."}}
         self.waiting_queue: Dict[str, dict] = {}
         # Current matches: {user_id: partner_id}
         self.matches: Dict[str, str] = {}
+        # User info for connected users: {user_id: {"nickname": "...", "field": "...", "year_level": "..."}}
+        self.user_info: Dict[str, dict] = {}
         
     async def connect(self, user_id: str, websocket: WebSocket):
         """Register a new WebSocket connection"""
@@ -40,6 +42,8 @@ class ConnectionManager:
         """Remove a user from all tracking structures"""
         if user_id in self.active_connections:
             del self.active_connections[user_id]
+        if user_id in self.user_info:
+            del self.user_info[user_id]
         if user_id in self.waiting_queue:
             del self.waiting_queue[user_id]
         if user_id in self.matches:
@@ -51,11 +55,18 @@ class ConnectionManager:
         print(f"User {user_id} disconnected. Total connections: {len(self.active_connections)}")
         return None
         
-    async def find_match(self, user_id: str, field: str = "", program: str = "", year_level: str = "", interests: list = None):
+    async def find_match(self, user_id: str, field: str = "", program: str = "", year_level: str = "", interests: list = None, nickname: str = ""):
         """Find a compatible partner for the user based on field, program, year level, and interests"""
         # Remove user from queue if they're already there
         if user_id in self.waiting_queue:
             del self.waiting_queue[user_id]
+        
+        # Store user info
+        self.user_info[user_id] = {
+            "nickname": nickname or "Anonymous",
+            "field": field,
+            "year_level": year_level
+        }
         
         interests = interests or []
         best_match = None
@@ -134,7 +145,8 @@ class ConnectionManager:
                 "field": field,
                 "program": program,
                 "year_level": year_level,
-                "interests": interests
+                "interests": interests,
+                "nickname": nickname or "Anonymous"
             }
             print(f"User {user_id} added to waiting queue. Queue size: {len(self.waiting_queue)}")
             return None
@@ -225,21 +237,42 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                 program = message.get("program", "")
                 year_level = message.get("year_level", "")
                 interests = message.get("interests", [])
+                nickname = message.get("nickname", "Anonymous")
                 
-                partner_id = await manager.find_match(user_id, field, program, year_level, interests)
+                partner_id = await manager.find_match(user_id, field, program, year_level, interests, nickname)
                 
                 if partner_id:
                     # Match found - notify both users
+                    partner_info = manager.user_info.get(partner_id, {"nickname": "Anonymous", "field": "", "year_level": ""})
+                    user_info = manager.user_info.get(user_id, {"nickname": "Anonymous", "field": "", "year_level": ""})
+                    
                     await manager.send_to_user(user_id, {
                         "type": "match_found",
                         "partner_id": partner_id,
                         "is_initiator": True,
                         "timestamp": datetime.now().isoformat()
                     })
+                    # Send partner's info to user
+                    await manager.send_to_user(user_id, {
+                        "type": "user_info",
+                        "nickname": partner_info["nickname"],
+                        "field": partner_info["field"],
+                        "year_level": partner_info["year_level"],
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    
                     await manager.send_to_user(partner_id, {
                         "type": "match_found",
                         "partner_id": user_id,
                         "is_initiator": False,
+                        "timestamp": datetime.now().isoformat()
+                    })
+                    # Send user's info to partner
+                    await manager.send_to_user(partner_id, {
+                        "type": "user_info",
+                        "nickname": user_info["nickname"],
+                        "field": user_info["field"],
+                        "year_level": user_info["year_level"],
                         "timestamp": datetime.now().isoformat()
                     })
                 else:
@@ -268,18 +301,39 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                     program = message.get("program", "")
                     year_level = message.get("year_level", "")
                     interests = message.get("interests", [])
-                    new_partner = await manager.find_match(user_id, field, program, year_level, interests)
+                    nickname = message.get("nickname", "Anonymous")
+                    new_partner = await manager.find_match(user_id, field, program, year_level, interests, nickname)
                     if new_partner:
+                        new_partner_info = manager.user_info.get(new_partner, {"nickname": "Anonymous", "field": "", "year_level": ""})
+                        user_info = manager.user_info.get(user_id, {"nickname": "Anonymous", "field": "", "year_level": ""})
+                        
                         await manager.send_to_user(user_id, {
                             "type": "match_found",
                             "partner_id": new_partner,
                             "is_initiator": True,
                             "timestamp": datetime.now().isoformat()
                         })
+                        # Send new partner's info to user
+                        await manager.send_to_user(user_id, {
+                            "type": "user_info",
+                            "nickname": new_partner_info["nickname"],
+                            "field": new_partner_info["field"],
+                            "year_level": new_partner_info["year_level"],
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        
                         await manager.send_to_user(new_partner, {
                             "type": "match_found",
                             "partner_id": user_id,
                             "is_initiator": False,
+                            "timestamp": datetime.now().isoformat()
+                        })
+                        # Send user's info to new partner
+                        await manager.send_to_user(new_partner, {
+                            "type": "user_info",
+                            "nickname": user_info["nickname"],
+                            "field": user_info["field"],
+                            "year_level": user_info["year_level"],
                             "timestamp": datetime.now().isoformat()
                         })
                     else:

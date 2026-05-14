@@ -5,7 +5,7 @@ echo   Starting Backend Server
 echo ========================================
 echo.
 
-cd "Call me Backend"
+cd Backend
 
 REM Check if Python is installed
 python --version >nul 2>&1

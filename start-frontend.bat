@@ -5,7 +5,7 @@ echo   Starting Frontend Server
 echo ========================================
 echo.
 
-cd call_me
+cd frontend
 
 REM Check if Node.js is installed
 node --version >nul 2>&1

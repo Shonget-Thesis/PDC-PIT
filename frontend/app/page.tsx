@@ -15,11 +15,14 @@ function getWebSocketUrl(userId: string) {
   return `${WS_BASE_URL}/ws/${userId}`;
 }
 
-// ICE servers for WebRTC
+// ICE servers for WebRTC - Enhanced for better stability
 const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
   ],
 };
 
@@ -30,6 +33,12 @@ interface ChatMessage {
   text: string;
   isMine: boolean;
   timestamp: Date;
+}
+
+interface UserInfo {
+  nickname: string;
+  field: string;
+  yearLevel: string;
 }
 
 const PROGRAM_OPTIONS_MAP: Record<string, { value: string; label: string }[]> = {
@@ -84,9 +93,13 @@ export default function Home() {
   const [program, setProgram] = useState<string>('');
   const [otherProgram, setOtherProgram] = useState<string>('');
   const [yearLevel, setYearLevel] = useState<string>('');
+  const [nickname, setNickname] = useState<string>('');
   const [isLocalTalking, setIsLocalTalking] = useState(false);
   const [isRemoteTalking, setIsRemoteTalking] = useState(false);
   const [showFireAnimation, setShowFireAnimation] = useState(false);
+  const [remoteUserInfo, setRemoteUserInfo] = useState<UserInfo | null>(null);
+  const [disconnectNotification, setDisconnectNotification] = useState<boolean>(false);
+  const chatDeleteTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const wsRef = useRef<WebSocket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -177,7 +190,7 @@ export default function Home() {
     peerConnectionRef.current?.close();
     peerConnectionRef.current = null;
     setConnectionState('disconnected');
-    setError('Partner disconnected');
+    setError('Buddy disconnected');
     setIsLocalTalking(false);
     setIsRemoteTalking(false);
 
@@ -234,7 +247,15 @@ export default function Home() {
           break;
 
         case 'partner_disconnected':
-          handlePartnerDisconnected();
+          handleBuddyDisconnected();
+          break;
+        
+        case 'user_info':
+          setRemoteUserInfo({
+            nickname: message.nickname || 'Buddy',
+            field: message.field || 'N/A',
+            yearLevel: message.year_level || 'N/A'
+          });
           break;
 
         case 'offer':
@@ -497,11 +518,12 @@ export default function Home() {
       program: selectedProgram,
       year_level: yearLevel,
       interests: interests,
+      nickname: nickname || 'Anonymous',
     }));
   };
 
-  // Skip to next partner
-  const skipPartner = () => {
+  // Skip to next buddy
+  const skipBuddy = () => {
     const selectedProgram = program === 'Other' ? otherProgram.trim() : program;
 
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -509,6 +531,7 @@ export default function Home() {
       peerConnectionRef.current = null;
       setConnectionState('waiting');
       setMessages([]); // Clear chat messages
+      setRemoteUserInfo(null);
       wsRef.current.send(JSON.stringify({ 
         type: 'skip',
         field: field,
@@ -517,6 +540,24 @@ export default function Home() {
         interests: interests,
       }));
     }
+  };
+
+  // Handle buddy disconnected - with auto-delete timer
+  const handleBuddyDisconnected = () => {
+    setConnectionState('disconnected');
+    setRemoteUserInfo(null);
+    setDisconnectNotification(true);
+    
+    // Clear existing timer if any
+    if (chatDeleteTimerRef.current) {
+      clearTimeout(chatDeleteTimerRef.current);
+    }
+    
+    // Auto-delete chat history after 5 minutes
+    chatDeleteTimerRef.current = setTimeout(() => {
+      setMessages([]);
+      setDisconnectNotification(false);
+    }, 5 * 60 * 1000);
   };
 
   // End call
@@ -529,9 +570,17 @@ export default function Home() {
     wsRef.current = null;
     setConnectionState('disconnected');
     setMessages([]); // Clear chat messages
+    setRemoteUserInfo(null);
+    setDisconnectNotification(false);
     setError(null);
     setIsLocalTalking(false);
     setIsRemoteTalking(false);
+    
+    // Clear timer
+    if (chatDeleteTimerRef.current) {
+      clearTimeout(chatDeleteTimerRef.current);
+      chatDeleteTimerRef.current = null;
+    }
     
     // Cleanup audio contexts
     if (localAudioContextRef.current) {
@@ -699,11 +748,14 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Scroll cue */}
-        <div className="mt-14 flex flex-col items-center gap-2 opacity-30"
+        {/* Scroll cue - Enhanced visibility */}
+        <div className="mt-14 flex flex-col items-center gap-3 opacity-70"
           style={{ animation: 'heroFadeUp 0.6s 0.5s ease both' }}>
-          <span className="text-xs tracking-widest text-white/40 uppercase">Start below</span>
-          <div className="w-px h-8 bg-gradient-to-b from-[#ff6b35]/60 to-transparent" style={{ animation: 'scrollCue 1.6s ease-in-out infinite' }} />
+          <span className="text-xs tracking-widest text-[#ff6b35]/80 uppercase font-semibold">Start below</span>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-1.5 h-12 bg-gradient-to-b from-[#ff6b35] via-[#ff6b35] to-transparent" style={{ animation: 'scrollCue 1.6s ease-in-out infinite' }} />
+            <div className="w-1.5 h-2 bg-[#ff6b35]" />
+          </div>
         </div>
 
         <style>{`
@@ -780,26 +832,34 @@ export default function Home() {
                     <div className="w-8 h-0.5 bg-[#ff6b35]/60 animate-pulse"></div>
                   </div>
 
-                  {/* Right Avatar - Stranger */}
+                  {/* Right Avatar - Buddy */}
                   <div className="flex flex-col items-center gap-2">
                     <div className="relative">
                       <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#ff6b35] to-[#ff8a5a] flex items-center justify-center border-4 border-[#ff6b35]/60 shadow-lg shadow-[#ff6b35]/30">
                         <User className="w-10 h-10 text-white" />
                       </div>
-                      {/* Talking indicator - shows when stranger talks */}
+                      {/* Talking indicator - shows when buddy talks */}
                       {isRemoteTalking && (
                         <div className="absolute inset-0 rounded-full border-4 border-[#ff6b35] animate-ping opacity-75"></div>
                       )}
                     </div>
-                    <span className="text-white/80 text-sm font-medium">Stranger</span>
+                    <div className="text-center">
+                      <span className="text-white/80 text-sm font-medium block">{remoteUserInfo?.nickname || 'Buddy'}</span>
+                      {remoteUserInfo && (
+                        <>
+                          <span className="text-white/60 text-xs block">{remoteUserInfo.field}</span>
+                          <span className="text-white/60 text-xs block">Year {remoteUserInfo.yearLevel}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             <h2 className="text-4xl font-bold mb-4 text-white" style={{ fontFamily: "'Google Sans', sans-serif" }}>
-              {connectionState === 'disconnected' && 'Find your study partner.'}
-              {connectionState === 'waiting' && 'Finding a partner...'}
+              {connectionState === 'disconnected' && 'Find your study buddy.'}
+              {connectionState === 'waiting' && 'Finding a peer...'}
               {connectionState === 'connecting' && 'Connecting...'}
               {connectionState === 'connected' && 'Connected'}
             </h2>
@@ -807,7 +867,7 @@ export default function Home() {
             <p className="text-white/60 text-lg max-w-md mx-auto">
               {connectionState === 'disconnected' &&
                 'Connect with students across different programs and year levels. Collaborate, mentor, and grow together.'}
-              {connectionState === 'waiting' && 'Searching for a compatible study partner...'}
+              {connectionState === 'waiting' && 'Searching for a compatible study buddy...'}
               {connectionState === 'connecting' && 'Establishing secure connection...'}
               {connectionState === 'connected' && "You're now connected. Start your academic journey together!"}
             </p>
@@ -846,7 +906,7 @@ export default function Home() {
                     </button>
 
                     <button
-                      onClick={skipPartner}
+                      onClick={skipBuddy}
                       className="p-4 bg-[#ff6b35]/30 hover:bg-[#ff6b35]/50 border border-[#ff6b35]/40 text-white rounded-full transition-all shadow-lg hover:scale-105"
                       title="Skip to next person"
                     >
@@ -956,37 +1016,54 @@ export default function Home() {
                 </select>
               </div>
 
-              {/* Interests/Topics */}
-              <div className="flex gap-3 items-start w-full">
-                <span className="text-white text-sm mt-2 font-medium whitespace-nowrap">Subject / Topic:</span>
-                <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 max-w-full md:max-w-70 flex-1">
-                  {interests.map((tag, index) => (
-                    <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] rounded-full text-white text-xs shrink-0 font-medium">
-                      <span>{tag}</span>
-                      <button
-                        onClick={() => setInterests(interests.filter((_, i) => i !== index))}
-                        className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+              {/* Nickname and Subject/Topic on bottom - side by side */}
+              <div className="flex gap-3 items-start w-full flex-col md:flex-row">
+                {/* Nickname Input */}
+                <div className="flex items-center gap-2 px-4 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 w-full md:w-auto md:flex-shrink-0">
+                  <User className="w-4 h-4 text-[#ff6b35]" />
+                  <span className="text-white text-sm font-medium whitespace-nowrap">Nickname:</span>
                   <input
                     type="text"
-                    value={interestInput}
-                    onChange={(e) => setInterestInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && interestInput.trim()) {
-                        e.preventDefault();
-                        if (!interests.includes(interestInput.trim())) {
-                          setInterests([...interests, interestInput.trim()]);
-                        }
-                        setInterestInput('');
-                      }
-                    }}
-                    placeholder={interests.length === 0 ? "Type topic and press Enter" : ""}
-                    className="bg-transparent text-white text-sm focus:outline-none placeholder:text-white/40 min-w-25 flex-1"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value.substring(0, 20))}
+                    placeholder="Display name"
+                    maxLength={20}
+                    className="flex-1 md:flex-none md:w-32 bg-transparent text-white text-sm focus:outline-none font-medium placeholder:text-white/40"
                   />
+                </div>
+
+                {/* Interests/Topics */}
+                <div className="flex gap-2 items-start w-full">
+                  <span className="text-white text-sm mt-2 font-medium whitespace-nowrap">Subject / Topic:</span>
+                  <div className="flex flex-wrap gap-1.5 px-3 py-2 bg-[#0f0a07]/60 rounded-lg border border-[#ff6b35]/30 max-w-full flex-1">
+                    {interests.map((tag, index) => (
+                      <div key={index} className="flex items-center gap-1 px-3 py-1 bg-gradient-to-r from-[#ff6b35] to-[#ff8a5a] rounded-full text-white text-xs shrink-0 font-medium">
+                        <span>{tag}</span>
+                        <button
+                          onClick={() => setInterests(interests.filter((_, i) => i !== index))}
+                          className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <input
+                      type="text"
+                      value={interestInput}
+                      onChange={(e) => setInterestInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && interestInput.trim()) {
+                          e.preventDefault();
+                          if (!interests.includes(interestInput.trim())) {
+                            setInterests([...interests, interestInput.trim()]);
+                          }
+                          setInterestInput('');
+                        }
+                      }}
+                      placeholder={interests.length === 0 ? "Type topic and press Enter" : ""}
+                      className="bg-transparent text-white text-sm focus:outline-none placeholder:text-white/40 min-w-25 flex-1"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -998,8 +1075,13 @@ export default function Home() {
           {/* Chat Header */}
           <div className="p-4 border-b border-[#ff6b35]/20 bg-[#0f0a07]/40">
             <h3 className="text-white font-bold" style={{ fontFamily: "'Google Sans', sans-serif" }}>Chat</h3>
-            <p className="text-white/60 text-sm">
-              {connectionState === 'connected' ? 'Send messages to your partner' : 'Connect to start chatting'}
+            {disconnectNotification && (
+              <div className="mt-2 p-2 bg-[#ff6b35]/20 border border-[#ff6b35]/40 rounded text-[#ff8a5a] text-xs">
+                ⏱ Your chats with the previous person will be deleted after 5 minutes.
+              </div>
+            )}
+            <p className="text-white/60 text-sm mt-1">
+              {connectionState === 'connected' ? 'Send messages to your buddy' : 'Connect to start chatting'}
             </p>
           </div>
 

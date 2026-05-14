@@ -100,6 +100,10 @@ export default function Home() {
   const [remoteUserInfo, setRemoteUserInfo] = useState<UserInfo | null>(null);
   const [disconnectNotification, setDisconnectNotification] = useState<boolean>(false);
   const chatDeleteTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatTimerRef = useRef<number | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
+  const maxReconnectAttempts = 5;
+  const baseReconnectDelay = 1000; // 1 second
   
   const wsRef = useRef<WebSocket | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
@@ -213,6 +217,32 @@ export default function Home() {
     setMessages(prev => [...prev, newMessage]);
   };
 
+  // Calculate exponential backoff delay for reconnection
+  const getReconnectDelay = (attempt: number): number => {
+    return Math.min(baseReconnectDelay * Math.pow(2, attempt), 30000); // Max 30 seconds
+  };
+
+  // Heartbeat mechanism for connection health monitoring
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatTimerRef.current) clearInterval(heartbeatTimerRef.current);
+    
+    heartbeatTimerRef.current = window.setInterval(() => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: 'heartbeat',
+          timestamp: Date.now()
+        }));
+      }
+    }, 30000); // Send heartbeat every 30 seconds
+  }, []);
+
+  const stopHeartbeat = useCallback(() => {
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+  }, []);
+
   // Initialize WebSocket connection
   const initializeWebSocket = useCallback(function initializeWebSocket() {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -222,11 +252,14 @@ export default function Home() {
 
     ws.onopen = () => {
       console.log('WebSocket connected');
+      reconnectAttemptsRef.current = 0; // Reset reconnect attempts on successful connection
       setError(null);
+      startHeartbeat();
     };
 
     ws.onmessage = async (event) => {
-      const message = JSON.parse(event.data);
+      try {
+        const message = JSON.parse(event.data);
       console.log('Received message:', message.type);
 
       switch (message.type) {
@@ -277,25 +310,44 @@ export default function Home() {
         case 'online_count':
           setOnlineCount(message.count);
           break;
+
+        case 'heartbeat':
+          console.log('Heartbeat acknowledged');
+          break;
+        }
+      } catch (error) {
+        console.error('Error processing message:', error);
       }
     };
 
     ws.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setError('Connection error. Please try again.');
+      setError('Connection error. Attempting to reconnect...');
       setConnectionState('disconnected');
+      stopHeartbeat();
     };
 
     ws.onclose = () => {
       console.log('WebSocket disconnected');
+      stopHeartbeat();
       setConnectionState('disconnected');
-      setTimeout(() => {
-        if (connectionState !== 'disconnected') {
-          initializeWebSocket();
-        }
-      }, 3000);
+      
+      // Auto-reconnect with exponential backoff
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        const delay = getReconnectDelay(reconnectAttemptsRef.current);
+        console.log(`Attempting reconnect in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1}/${maxReconnectAttempts})`);
+        reconnectAttemptsRef.current++;
+        
+        setTimeout(() => {
+          if (connectionState !== 'disconnected' || wsRef.current?.readyState !== WebSocket.OPEN) {
+            initializeWebSocket();
+          }
+        }, delay);
+      } else {
+        setError('Connection failed after maximum attempts. Please refresh the page.');
+      }
     };
-  }, [userId, connectionState]);
+  }, [userId, connectionState, startHeartbeat, stopHeartbeat, getReconnectDelay]);
 
   // Get user media (microphone)
   async function getUserMedia() {
@@ -457,13 +509,39 @@ export default function Home() {
     return pc;
   }
 
+  // Sanitize chat input to prevent XSS
+  const sanitizeChatInput = (input: string): string => {
+    return input
+      .replace(/[<>"'&]/g, (char) => {
+        const escapeMap: { [key: string]: string } = {
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#x27;',
+          '&': '&amp;'
+        };
+        return escapeMap[char] || char;
+      })
+      .substring(0, 500); // Max 500 chars per message
+  };
+
+  // Sanitize nickname input
+  const sanitizeNickname = (input: string): string => {
+    return input
+      .replace(/[<>"'&]/g, '')
+      .replace(/[^a-zA-Z0-9\s\-_]/g, '')
+      .trim()
+      .substring(0, 20);
+  };
+
   // Send chat message
   const sendMessage = () => {
-    if (!messageInput.trim() || connectionState !== 'connected') return;
+    const sanitizedMessage = sanitizeChatInput(messageInput.trim());
+    if (!sanitizedMessage || connectionState !== 'connected') return;
 
     const newMessage: ChatMessage = {
       id: Date.now().toString(),
-      text: messageInput,
+      text: sanitizedMessage,
       isMine: true,
       timestamp: new Date(),
     };
@@ -474,7 +552,7 @@ export default function Home() {
       wsRef.current.send(
         JSON.stringify({
           type: 'chat_message',
-          message: messageInput,
+          message: sanitizedMessage,
         })
       );
     }
@@ -495,12 +573,43 @@ export default function Home() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Detect network changes for connection restoration
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('Network restored');
+      setError(null);
+      if (wsRef.current?.readyState !== WebSocket.OPEN) {
+        reconnectAttemptsRef.current = 0;
+        initializeWebSocket();
+      }
+    };
+
+    const handleOffline = () => {
+      console.log('Network lost');
+      setError('No internet connection. Waiting for network restoration...');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [initializeWebSocket]);
+
   // Start call - find a match
   const startCall = () => {
     const selectedProgram = program === 'Other' ? otherProgram.trim() : program;
+    const cleanedNickname = sanitizeNickname(nickname);
 
     if (!field || !selectedProgram || !yearLevel) {
       setError('Please select your field, program, and year level before starting a call');
+      return;
+    }
+
+    if (!cleanedNickname || cleanedNickname.length < 2) {
+      setError('Nickname must be at least 2 characters');
       return;
     }
 
@@ -518,7 +627,7 @@ export default function Home() {
       program: selectedProgram,
       year_level: yearLevel,
       interests: interests,
-      nickname: nickname || 'Anonymous',
+      nickname: cleanedNickname,
     }));
   };
 
@@ -547,6 +656,10 @@ export default function Home() {
     setConnectionState('disconnected');
     setRemoteUserInfo(null);
     setDisconnectNotification(true);
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
     
     // Clear existing timer if any
     if (chatDeleteTimerRef.current) {
@@ -576,11 +689,16 @@ export default function Home() {
     setIsLocalTalking(false);
     setIsRemoteTalking(false);
     
-    // Clear timer
+    // Clear timers
     if (chatDeleteTimerRef.current) {
       clearTimeout(chatDeleteTimerRef.current);
       chatDeleteTimerRef.current = null;
     }
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
     
     // Cleanup audio contexts
     if (localAudioContextRef.current) {

@@ -4,8 +4,9 @@ from typing import Dict, Set, Optional
 import json
 import uuid
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+from collections import defaultdict
 
 app = FastAPI(title="SYNCED - Academic Peer Connection Backend")
 
@@ -25,17 +26,39 @@ class ConnectionManager:
     def __init__(self):
         # Active WebSocket connections: {user_id: websocket}
         self.active_connections: Dict[str, WebSocket] = {}
-        # Users waiting for a match with their preferences: {user_id: {"program": "...", "year_level": "...", "interests": [...], "nickname": "...", "field": "..."}}
+        # Users waiting for a match with their preferences: {user_id: {...}}
         self.waiting_queue: Dict[str, dict] = {}
         # Current matches: {user_id: partner_id}
         self.matches: Dict[str, str] = {}
-        # User info for connected users: {user_id: {"nickname": "...", "field": "...", "year_level": "..."}}
+        # User info for connected users: {user_id: {...}}
         self.user_info: Dict[str, dict] = {}
+        # Last message timestamp for rate limiting: {user_id: datetime}
+        self.last_message_time: Dict[str, datetime] = {}
+        # Connection attempt tracking: {user_id: [(timestamp, success), ...]}
+        self.connection_attempts: Dict[str, list] = defaultdict(list)
+        # Last heartbeat received: {user_id: datetime}
+        self.last_heartbeat: Dict[str, datetime] = {}
+        # Rate limiting constants
+        self.message_rate_limit = 0.1  # Min 100ms between messages
+        self.max_connection_attempts = 10  # Max attempts per minute
+        self.connection_attempt_window = 60  # 1 minute window
         
     async def connect(self, user_id: str, websocket: WebSocket):
         """Register a new WebSocket connection"""
+        # Check connection attempt limit
+        if not self.check_connection_limit(user_id):
+            await websocket.accept()
+            await websocket.send_json({
+                "type": "error",
+                "message": "Too many connection attempts. Please wait before trying again.",
+                "timestamp": datetime.now().isoformat()
+            })
+            await websocket.close(code=1008, reason="Rate limit exceeded")
+            return
+        
         await websocket.accept()
         self.active_connections[user_id] = websocket
+        self.last_heartbeat[user_id] = datetime.now()  # Initialize heartbeat
         print(f"User {user_id} connected. Total connections: {len(self.active_connections)}")
         
     def disconnect(self, user_id: str):
@@ -46,6 +69,10 @@ class ConnectionManager:
             del self.user_info[user_id]
         if user_id in self.waiting_queue:
             del self.waiting_queue[user_id]
+        if user_id in self.last_message_time:
+            del self.last_message_time[user_id]
+        if user_id in self.last_heartbeat:
+            del self.last_heartbeat[user_id]
         if user_id in self.matches:
             partner_id = self.matches[user_id]
             del self.matches[user_id]
@@ -57,6 +84,13 @@ class ConnectionManager:
         
     async def find_match(self, user_id: str, field: str = "", program: str = "", year_level: str = "", interests: list = None, nickname: str = ""):
         """Find a compatible partner for the user based on field, program, year level, and interests"""
+        # Input validation and sanitization
+        field = str(field).strip()[:100] if field else ""
+        program = str(program).strip()[:100] if program else ""
+        year_level = str(year_level).strip()[:50] if year_level else ""
+        nickname = str(nickname).strip()[:20] if nickname else "Anonymous"
+        interests = [str(i).strip()[:50] for i in (interests or [])][:10]  # Max 10 interests
+        
         # Remove user from queue if they're already there
         if user_id in self.waiting_queue:
             del self.waiting_queue[user_id]
@@ -184,6 +218,41 @@ class ConnectionManager:
     def get_online_count(self) -> int:
         """Get the current number of online users"""
         return len(self.active_connections)
+    
+    def check_rate_limit(self, user_id: str) -> bool:
+        """Check if user has exceeded message rate limit"""
+        now = datetime.now()
+        if user_id in self.last_message_time:
+            time_diff = (now - self.last_message_time[user_id]).total_seconds()
+            if time_diff < self.message_rate_limit:
+                return False  # Rate limit exceeded
+        self.last_message_time[user_id] = now
+        return True  # Rate limit check passed
+    
+    def check_connection_limit(self, user_id: str) -> bool:
+        """Check if user has exceeded connection attempt limit"""
+        now = datetime.now()
+        # Clean old attempts outside the window
+        self.connection_attempts[user_id] = [
+            (ts, success) for ts, success in self.connection_attempts[user_id]
+            if (now - ts).total_seconds() < self.connection_attempt_window
+        ]
+        # Check if exceeded max attempts
+        if len(self.connection_attempts[user_id]) >= self.max_connection_attempts:
+            return False
+        self.connection_attempts[user_id].append((now, True))
+        return True
+    
+    def record_heartbeat(self, user_id: str):
+        """Record heartbeat timestamp for connection health monitoring"""
+        self.last_heartbeat[user_id] = datetime.now()
+    
+    def is_connection_healthy(self, user_id: str, timeout_seconds: int = 90) -> bool:
+        """Check if connection is still healthy based on heartbeat"""
+        if user_id not in self.last_heartbeat:
+            return True  # No heartbeat yet, assume healthy
+        time_since_heartbeat = (datetime.now() - self.last_heartbeat[user_id]).total_seconds()
+        return time_since_heartbeat < timeout_seconds
 
 
 manager = ConnectionManager()
@@ -230,6 +299,24 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
             message_type = message.get("type")
             
             print(f"Received from {user_id}: {message_type}")
+            
+            # Check rate limit for all messages except heartbeat
+            if message_type != "heartbeat" and not manager.check_rate_limit(user_id):
+                await manager.send_to_user(user_id, {
+                    "type": "error",
+                    "message": "Message rate limit exceeded. Please slow down.",
+                    "timestamp": datetime.now().isoformat()
+                })
+                continue
+            
+            if message_type == "heartbeat":
+                # Record heartbeat and send acknowledgment
+                manager.record_heartbeat(user_id)
+                await manager.send_to_user(user_id, {
+                    "type": "heartbeat",
+                    "timestamp": datetime.now().isoformat()
+                })
+                continue
             
             if message_type == "find_match":
                 # User wants to find a new partner
